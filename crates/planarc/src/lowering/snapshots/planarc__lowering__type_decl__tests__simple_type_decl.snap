@@ -1,0 +1,13 @@
+---
+source: crates/planarc/src/lowering/type_decl.rs
+expression: ast
+---
+TypeDeclaration {
+    name: "UserID" @ Span { start: 5, end: 11 },
+    ty: TypeAnnotation {
+        name: "Int" @ Span { start: 14, end: 17 },
+        args: [],
+        generic_var: None,
+    },
+    refinement: None,
+} @ Span { start: 0, end: 17 }

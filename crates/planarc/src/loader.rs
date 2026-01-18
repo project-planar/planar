@@ -1,21 +1,19 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use libloading::{Library, Symbol};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 use tree_sitter::Language;
 
 use crate::common;
 
-
 type LanguageFn = unsafe extern "C" fn() -> Language;
 
 #[derive(Default)]
 pub struct LanguageLoader {
-    libs: RwLock<HashMap<String, Arc<Library>>>,
+    libs: RwLock<BTreeMap<String, Arc<Library>>>,
 }
 
 impl LanguageLoader {
-    
     pub fn load(&self, lang_name: &str) -> Result<Language> {
         {
             let libs = self.libs.read().map_err(|_| anyhow!("Poisoned lock"))?;
@@ -30,13 +28,14 @@ impl LanguageLoader {
         if !lib_path.exists() {
             return Err(anyhow!(
                 "Grammar binary for '{}' not found. Please run `planar setup` first.\nExpected path: {:?}",
-                lang_name, lib_path
+                lang_name,
+                lib_path
             ));
         }
 
         let lib = unsafe { Library::new(&lib_path) }
             .with_context(|| format!("Failed to load dynamic library at {:?}", lib_path))?;
-        
+
         let arc_lib = Arc::new(lib);
 
         {
@@ -49,22 +48,22 @@ impl LanguageLoader {
 
     #[allow(unsafe_op_in_unsafe_fn)]
     unsafe fn get_symbol(&self, lib: &Library, lang_name: &str) -> Result<Language> {
-        
         let symbol_name = format!("tree_sitter_{}", lang_name.replace('-', "_"));
-        
-        let constructor: Symbol<LanguageFn> = lib.get(symbol_name.as_bytes())
-            .with_context(|| format!("Failed to find symbol '{}' in grammar binary", symbol_name))?;
+
+        let constructor: Symbol<LanguageFn> =
+            lib.get(symbol_name.as_bytes()).with_context(|| {
+                format!("Failed to find symbol '{}' in grammar binary", symbol_name)
+            })?;
 
         Ok(constructor())
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tree_sitter::{Node, Parser};
     use insta::assert_snapshot;
+    use tree_sitter::{Node, Parser};
 
     fn format_tree(node: Node, source: &str, depth: usize) -> String {
         let kind = node.kind();
@@ -83,10 +82,16 @@ mod tests {
         let mut result = format!(
             "{}{}{} [{}, {}] - [{}, {}]",
             "  ".repeat(depth),
-            if let Some(name) = field_name { format!("{}: ", name) } else { "".to_string() },
+            if let Some(name) = field_name {
+                format!("{}: ", name)
+            } else {
+                "".to_string()
+            },
             kind,
-            start.row, start.column,
-            end.row, end.column
+            start.row,
+            start.column,
+            end.row,
+            end.column
         );
 
         if node.child_count() == 0 {
@@ -98,7 +103,7 @@ mod tests {
 
         for i in 0..node.child_count() {
             result.push('\n');
-            result.push_str(&format_tree(node.child(i as u32).unwrap(), source, depth + 1));
+            result.push_str(&format_tree(node.child(i).unwrap(), source, depth + 1));
         }
         result
     }
@@ -106,15 +111,14 @@ mod tests {
     fn run_snapshot_test(lang_name: &str, code: &str, snapshot_name: &str) {
         let loader = LanguageLoader::default();
         let lang = loader.load(lang_name).expect("Run `planar setup` first");
-        
+
         let mut parser = Parser::new();
         parser.set_language(&lang).unwrap();
         let tree = parser.parse(code, None).unwrap();
-        
+
         let formatted = format_tree(tree.root_node(), code, 0);
         assert_snapshot!(snapshot_name, formatted);
     }
-
 
     #[test]
     fn test_snapshot_yaml() {

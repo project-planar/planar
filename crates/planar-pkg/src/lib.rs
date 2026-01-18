@@ -5,3 +5,4 @@ mod var_registry;
 mod error;
 mod model;
 mod tests;
+mod packaging;

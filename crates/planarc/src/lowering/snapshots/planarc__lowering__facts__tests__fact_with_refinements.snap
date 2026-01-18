@@ -1,0 +1,77 @@
+---
+source: crates/planarc/src/lowering/facts.rs
+expression: ast
+---
+FactDefinition {
+    attributes: [],
+    name: "Product" @ Span { start: 18, end: 25 },
+    fields: [
+        FactField {
+            attributes: [],
+            name: "price" @ Span { start: 44, end: 49 },
+            ty: TypeAnnotation {
+                name: "Float" @ Span { start: 51, end: 56 },
+                args: [],
+                generic_var: None,
+            },
+            refinement: Some(
+                PartialComparison {
+                    op: ">",
+                    right: Number(
+                        "0",
+                    ) @ Span { start: 61, end: 62 },
+                } @ Span { start: 59, end: 62 },
+            ),
+        } @ Span { start: 44, end: 62 },
+        FactField {
+            attributes: [],
+            name: "tags" @ Span { start: 81, end: 85 },
+            ty: TypeAnnotation {
+                name: "List" @ Span { start: 87, end: 91 },
+                args: [
+                    TypeArgument {
+                        ty: TypeAnnotation {
+                            name: "String" @ Span { start: 92, end: 98 },
+                            args: [],
+                            generic_var: None,
+                        },
+                        refinement: Some(
+                            InList(
+                                [
+                                    StringLit(
+                                        "\"sale\"",
+                                    ) @ Span { start: 105, end: 111 },
+                                    StringLit(
+                                        "\"new\"",
+                                    ) @ Span { start: 113, end: 118 },
+                                    StringLit(
+                                        "\"deprecated\"",
+                                    ) @ Span { start: 120, end: 132 },
+                                ],
+                            ) @ Span { start: 101, end: 133 },
+                        ),
+                    } @ Span { start: 92, end: 133 },
+                ],
+                generic_var: None,
+            },
+            refinement: None,
+        } @ Span { start: 81, end: 134 },
+        FactField {
+            attributes: [],
+            name: "reliability" @ Span { start: 152, end: 163 },
+            ty: TypeAnnotation {
+                name: "Float" @ Span { start: 165, end: 170 },
+                args: [],
+                generic_var: None,
+            },
+            refinement: Some(
+                PartialComparison {
+                    op: ">",
+                    right: Number(
+                        "0",
+                    ) @ Span { start: 184, end: 185 },
+                } @ Span { start: 173, end: 185 },
+            ),
+        } @ Span { start: 152, end: 185 },
+    ],
+} @ Span { start: 13, end: 199 }

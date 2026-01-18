@@ -2,7 +2,9 @@ use std::path::PathBuf;
 use planar_config_macro::{planar_node, NodeSchema, Parser};
 use strum::{EnumString, Display};
 
-use crate::schema::{definitions::ValueKind, value_info::KdlValueInfo}; // Рекомендую добавить strum для Enums
+use crate::schema::{definitions::ValueKind, value_info::KdlValueInfo}; 
+
+pub mod planardl;
 
 // =============================================================================
 // ROOT

@@ -1,5 +1,5 @@
 [package]
-name = "planar-config"
+name = "planar-pkg"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,8 +8,12 @@ insta = { version = "1.45.1",  features = ["yaml"] }
 serde = { version  ="1.0.228", features = ["derive"] }
 serde_json = "1.0.148"
 miette = { workspace = true }
+petgraph = { workspace = true }
 kdl = { workspace = true }
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 planar-config-macro = { workspace = true }
-tree-sitter-kdl = { git = "https://github.com/Tam1SH/tree-sitter-kdl" }
+planarc = { workspace = true }
+tree-sitter-kdl = { git = "https://github.com/Tam1SH/tree-sitter-kdl", branch = "downgrade"}
 strum = { version = "0.27.2", features = ["derive"] }
+tracing = "0.1.44"

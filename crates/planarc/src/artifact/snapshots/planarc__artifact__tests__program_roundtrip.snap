@@ -1,0 +1,136 @@
+---
+source: crates/planarc/src/artifact/mod.rs
+expression: "(&original, archived)"
+---
+(
+    Program {
+        symbol_table: SymbolTable {
+            symbols: {
+                "core.Base": SymbolMetadata {
+                    id: SymbolId(
+                        1,
+                    ),
+                    kind: Fact,
+                    location: Location {
+                        file_id: FileId(
+                            42,
+                        ),
+                        span: Span {
+                            start: 0,
+                            end: 100,
+                        },
+                    },
+                },
+            },
+            next_id: 2,
+        },
+        modules: {
+            "core": LinkedModule {
+                file_id: FileId(
+                    42,
+                ),
+                facts: [
+                    LinkedFact {
+                        id: SymbolId(
+                            1,
+                        ),
+                        attributes: [],
+                        name: "Base",
+                        fields: [
+                            LinkedField {
+                                attributes: [],
+                                name: "id",
+                                ty: LinkedTypeReference {
+                                    symbol: Global(
+                                        SymbolId(
+                                            100,
+                                        ) @ Span { start: 0, end: 5 },
+                                    ) @ Span { start: 0, end: 5 },
+                                    args: [],
+                                    generic_var: Some(
+                                        "T",
+                                    ),
+                                },
+                                refinement: None,
+                            } @ Span { start: 10, end: 20 },
+                        ],
+                    } @ Span { start: 0, end: 100 },
+                ],
+                types: [],
+            },
+        },
+        wasm_modules: {
+            "logic": [
+                222,
+                173,
+                190,
+                239,
+            ],
+        },
+    },
+    ArchivedProgram {
+        symbol_table: ArchivedSymbolTable {
+            symbols: {
+                "core.Base": ArchivedSymbolMetadata {
+                    id: ArchivedSymbolId(
+                        1,
+                    ),
+                    kind: Fact,
+                    location: ArchivedLocation {
+                        file_id: ArchivedFileId(
+                            42,
+                        ),
+                        span: ArchivedSpan {
+                            start: 0,
+                            end: 100,
+                        },
+                    },
+                },
+            },
+            next_id: 2,
+        },
+        modules: {
+            "core": ArchivedLinkedModule {
+                file_id: ArchivedFileId(
+                    42,
+                ),
+                facts: [
+                    ArchivedLinkedFact {
+                        id: ArchivedSymbolId(
+                            1,
+                        ),
+                        attributes: [],
+                        name: "Base",
+                        fields: [
+                            ArchivedLinkedField {
+                                attributes: [],
+                                name: "id",
+                                ty: ArchivedLinkedTypeReference {
+                                    symbol: Global(
+                                        ArchivedSymbolId(
+                                            100,
+                                        ) @ ArchivedSpan { start: 0, end: 5 },
+                                    ) @ ArchivedSpan { start: 0, end: 5 },
+                                    args: [],
+                                    generic_var: Some(
+                                        "T",
+                                    ),
+                                },
+                                refinement: None,
+                            } @ ArchivedSpan { start: 10, end: 20 },
+                        ],
+                    } @ ArchivedSpan { start: 0, end: 100 },
+                ],
+                types: [],
+            },
+        },
+        wasm_modules: {
+            "logic": [
+                222,
+                173,
+                190,
+                239,
+            ],
+        },
+    },
+)

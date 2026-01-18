@@ -17,7 +17,9 @@ export default grammar({
     $._unicode_space,
   ],
 
-  conflicts: $ => [],
+  conflicts: $ => [
+    [$._refinement_expression, $._expression]
+  ],
 
   rules: {
 
@@ -28,13 +30,12 @@ export default grammar({
         $.node_definition, 
         $.extern_definition,
         $.import_definition,
-        $.fact_defintion,
+        $.fact_definition,
+        $.type_declaration,
         $._newline
       ))
     ),
 
-
-    
     query_definition: $ => seq(
       'query',
       field('name', $.identifier),
@@ -47,6 +48,16 @@ export default grammar({
       field('content', alias(repeat(/[^`]+/), $.raw_content)),
       '`'
     ),
+    attribute: $ => seq(
+      '#',
+      field('name', $.identifier),
+      optional(seq(
+        '(',
+        commaSep($._expression),
+        ')'
+      )),
+      $._newline
+    ),
 
     // schema "docker-compose" grammar="yaml"
     header: $ => seq(
@@ -58,17 +69,117 @@ export default grammar({
     ),
     
 
-    fact_field_definition: $ => seq(
-      field('name', $.identifier), field('type', $.identifier)
-    ),
-
-    fact_defintion: $ => seq(
-      'fact',
-      $.identifier,
+    fact_definition: $ => seq(
+      repeat($.attribute),
+      'fact', field('name', $.identifier),
       '{',
       repeat(choice($.fact_field_definition, $._newline)),
       '}'
     ),
+
+    type_declaration: $ => seq(
+      'type',
+      field('name', $.identifier),
+      '=',
+      field('type', $.type_annotation),
+      field('refinement', optional($.refinement))
+    ),
+
+    fact_field_definition: $ => seq(
+      repeat($.attribute),
+      field('name', $.identifier),
+      ':',
+      field('type', $.type_annotation),
+      field('refinement', optional($.refinement))
+    ),
+
+    
+    type_annotation: $ => seq(
+      field('name', $.type_identifier),
+      
+      field('arguments', optional($.type_arguments)),
+      
+      
+      optional(seq(
+        '(',
+        field('variable', $.identifier),
+        ')'
+      ))
+    ),
+
+    
+    type_arguments: $ => seq(
+      '<',
+      commaSep1($.type_argument),
+      '>'
+    ),
+
+    
+    type_argument: $ => seq(
+      field('type', $.type_annotation),
+      field('refinement', optional($.refinement))
+    ),
+
+    
+    refinement: $ => seq(
+      '|',
+      $._refinement_expression
+    ),
+
+    
+    _refinement_expression: $ => choice(
+      $.binary_expression,   
+      $.call_expression,     
+      $.operator_section,    
+      $.in_expression,       
+      $.identifier           
+    ),
+
+    
+    operator_section: $ => seq(
+      field('operator', choice('>', '<', '>=', '<=', '==', '!=')),
+      field('right', $._expression)
+    ),
+    list_items: $ => commaSep1($._expression),
+    
+    in_expression: $ => seq(
+      'in',
+      '[',
+      choice(
+        $.range,      
+        $.list_items  
+      ),
+      ']'
+    ),
+
+    range: $ => seq(
+      field('start', $._expression),
+      '..',
+      optional(field('end', $._expression)) 
+    ),
+
+    type_identifier: $ => $.fqmn,
+
+    _expression: $ => choice(
+      $.identifier,
+      $.number,
+      $.string,
+      $.binary_expression,
+      $.call_expression
+    ),
+    
+    binary_expression: $ => prec.left(1, seq(
+        field('left', $._expression),
+        field('operator', choice('+', '-', '*', '/', '==', '!=', '>', '<', '>=', '<=')),
+        field('right', $._expression)
+    )),
+
+    call_expression: $ => seq(
+        field('function', $.dotted_identifier),
+        '(', commaSep($._expression), ')'
+    ),
+    
+    dotted_identifier: $ => sep1($.identifier, '.'),
 
     import_definition: $ => seq(
       'import',
@@ -112,14 +223,14 @@ export default grammar({
       repeat(choice($.extern_def_fn, $._newline)),
       '}'
     ),
-    // node Service { ... }
+    
     node_definition: $ => seq(
       'node',
       field('kind', $.fqmn),
       $.block
     ),
 
-    // { ... statements ... }
+    
     block: $ => seq(
       '{',
       repeat(choice($._statement, $._newline)),
@@ -131,7 +242,7 @@ export default grammar({
     ),
 
     
-    // match #" ... "#
+    
     match_stmt: $ => seq(
       'match',
       field('query', choice($.raw_string, $.identifier)),
@@ -167,15 +278,15 @@ export default grammar({
     ),
     
     call_func: $ => seq(
-      $.fqmn,
-      repeat($.variable),
+      field('function', $.fqmn),
+      repeat(field('arg', $.variable)),
       $._newline,
     ),
 
     graph_bind: $ => seq(
-      $.graph_left_statements,
+      field('left', $.graph_left_statements),
       field('relation', choice('<-', '->', '<->')),
-      $.graph_right_statements
+      field('right', $.graph_right_statements)
     ),
 
     capture_block: $ => seq(
@@ -223,7 +334,7 @@ export default grammar({
       '"'
     )),
 
-    // KDL-style Raw String: r#"..."# 
+    
     raw_string: $ => seq(
       '`',
       /[^`]+/,
@@ -278,3 +389,25 @@ export default grammar({
     comment: $ => token(seq('//', /.*/)),
   }
 });
+
+/**
+ * @param {RuleOrLiteral} rule
+ */
+function commaSep1(rule) {
+  return seq(rule, repeat(seq(',', rule)));
+}
+
+/**
+ * @param {RuleOrLiteral} rule
+ */
+function commaSep(rule) {
+  return optional(commaSep1(rule));
+}
+
+/**
+ * @param {RuleOrLiteral} rule
+ * @param {RuleOrLiteral} separator
+ */
+function sep1(rule, separator) {
+  return seq(rule, repeat(seq(separator, rule)));
+}

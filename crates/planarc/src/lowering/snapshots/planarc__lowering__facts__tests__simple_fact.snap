@@ -1,0 +1,35 @@
+---
+source: crates/planarc/src/lowering/facts.rs
+expression: ast
+---
+FactDefinition {
+    attributes: [],
+    name: "User" @ Span { start: 18, end: 22 },
+    fields: [
+        FactField {
+            attributes: [
+                Attribute {
+                    name: "auto_id" @ Span { start: 42, end: 49 },
+                    args: [],
+                } @ Span { start: 41, end: 50 },
+            ],
+            name: "name" @ Span { start: 66, end: 70 },
+            ty: TypeAnnotation {
+                name: "String" @ Span { start: 72, end: 78 },
+                args: [],
+                generic_var: None,
+            },
+            refinement: None,
+        } @ Span { start: 41, end: 78 },
+        FactField {
+            attributes: [],
+            name: "age" @ Span { start: 95, end: 98 },
+            ty: TypeAnnotation {
+                name: "Int" @ Span { start: 100, end: 103 },
+                args: [],
+                generic_var: None,
+            },
+            refinement: None,
+        } @ Span { start: 95, end: 103 },
+    ],
+} @ Span { start: 13, end: 117 }

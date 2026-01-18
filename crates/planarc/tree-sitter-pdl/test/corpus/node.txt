@@ -4,6 +4,7 @@ Schema Header
 schema "docker-compose" grammar="yaml"
 
 ---
+
 (source_file
   header: (header
     name: (string)
@@ -24,8 +25,7 @@ node Service2 {}
     (block))
   (node_definition
     kind: (fqmn)
-    (block))
-)
+    (block)))
 
 ==================
 Match Statement
@@ -57,6 +57,7 @@ extern std.lint {
 }
 
 ---
+
 (source_file
   (extern_definition
     (fqmn)
@@ -96,6 +97,7 @@ extern core {
 
 
 ---
+
 (source_file
   (extern_definition
     (fqmn)
@@ -111,7 +113,6 @@ extern core {
         (extern_return
           (identifier))))))
 
-
 ==================
 Import Declaration
 ==================
@@ -119,6 +120,7 @@ Import Declaration
 import std.lint
 
 ---
+
 (source_file
   (import_definition
     (fqmn)))
@@ -137,6 +139,7 @@ query QueryDefPattern = `
 `
 
 ---
+
 (source_file
   (query_definition
     (identifier)
@@ -162,6 +165,7 @@ node IncludeDirective {
 }
 
 ---
+
 (source_file
   (header
     (string)
@@ -195,26 +199,92 @@ node IncludeDirective {
 Fact Declaration
 ==================
 
-fact Node {
-  text String
-  start_byte Int
-  end_byte Int
-  file_path String
+fact Node {  
+  #auto_id
+  file_path: String(p) | std.fs.is_path(p)
+  text: String
+  start_byte: Int | in [0..]
+  end_byte: Int | in [start_byte..]
+  tags: List<String | in ["sale", "new", "deprecated"]> 
 }
-
 ---
+
 (source_file
-  (fact_defintion
+  (fact_definition
     (identifier)
     (fact_field_definition
+      (attribute
+        (identifier))
       (identifier)
-      (identifier))
+      (type_annotation
+        (type_identifier
+          (fqmn))
+        (identifier))
+      (refinement
+        (call_expression
+          (dotted_identifier
+            (identifier)
+            (identifier)
+            (identifier))
+          (identifier))))
     (fact_field_definition
       (identifier)
-      (identifier))
+      (type_annotation
+        (type_identifier
+          (fqmn))))
     (fact_field_definition
       (identifier)
-      (identifier))
+      (type_annotation
+        (type_identifier
+          (fqmn)))
+      (refinement
+        (in_expression
+          (range
+            (number)))))
     (fact_field_definition
       (identifier)
-      (identifier))))
+      (type_annotation
+        (type_identifier
+          (fqmn)))
+      (refinement
+        (in_expression
+          (range
+            (identifier)))))
+    (fact_field_definition
+      (identifier)
+      (type_annotation
+        (type_identifier
+          (fqmn))
+        (type_arguments
+          (type_argument
+            (type_annotation
+              (type_identifier
+                (fqmn)))
+            (refinement
+              (in_expression
+                (list_items
+                  (string)
+                  (string)
+                  (string))))))))))
+
+==================
+Type Declaration
+==================
+
+type ParsableInt = String(x) | std.is_int(x)
+type ListPositiveInt = List<i64 | x > 0>
+---
+
+(source_file
+  (type_declaration
+    (identifier)
+    (type_annotation
+      (type_identifier
+        (fqmn))
+      (identifier))
+    (refinement
+      (call_expression
+        (dotted_identifier
+          (identifier)
+          (identifier))
+        (identifier)))))

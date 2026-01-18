@@ -21,13 +21,11 @@
     "authors": [
       {
         "name": "Tam1SH",
-        "email": "ignatternyev54@gmail.com",
-        "url": ""
+        "email": "ignatternyev54@gmail.com"
       }
     ],
     "links": {
-      "repository": "https://github.com/tree-sitter/tree-sitter-planardl",
-      "funding": ""
+      "repository": "https://github.com/tree-sitter/tree-sitter-planardl"
     }
   },
   "bindings": {

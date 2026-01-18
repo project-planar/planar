@@ -26,7 +26,6 @@ pub fn format_filename(lang: &str) -> String {
 }
 
 pub fn local_dir() -> PathBuf {
-
     if let Ok(overridden) = std::env::var("PLANAR_GRAMMARS_PATH") {
         return std::path::PathBuf::from(overridden);
     }

@@ -15,8 +15,7 @@ query IncludePattern = `
 node IncludeDirective {
     match IncludePattern {
         @path {
-
-            global -> std.fs.resolve_glob $CURRENT_FILE @path.text
+            @path -> resolve_glob @path.text
         }
     }
 }
