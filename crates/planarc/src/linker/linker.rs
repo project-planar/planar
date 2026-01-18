@@ -490,7 +490,6 @@ mod tests {
     use crate::module_loader::{InMemoryLoader, PackageRoot, Source};
     use crate::spanned::Location;
 
-    // --- Helpers ---
 
     fn get_parser() -> Parser {
         let mut parser = Parser::new();
@@ -538,8 +537,6 @@ mod tests {
 
         (lowered, linker)
     }
-
-    // --- Tests ---
 
     #[test]
     fn test_global_access_without_import() {

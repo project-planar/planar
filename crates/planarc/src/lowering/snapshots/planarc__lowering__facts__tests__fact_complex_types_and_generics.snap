@@ -4,25 +4,25 @@ expression: ast
 ---
 FactDefinition {
     attributes: [],
-    name: "Container" @ Span { start: 18, end: 27 },
+    name: "Container" @ Span { start: 18, end: 27, line: 2, col: 18 },
     fields: [
         FactField {
             attributes: [],
-            name: "item" @ Span { start: 46, end: 50 },
+            name: "item" @ Span { start: 46, end: 50, line: 3, col: 17 },
             ty: TypeAnnotation {
-                name: "String" @ Span { start: 52, end: 58 },
+                name: "String" @ Span { start: 52, end: 58, line: 3, col: 23 },
                 args: [],
                 generic_var: Some(
                     "x",
                 ),
             },
             refinement: None,
-        } @ Span { start: 46, end: 61 },
+        } @ Span { start: 46, end: 61, line: 3, col: 17 },
         FactField {
             attributes: [],
-            name: "count" @ Span { start: 78, end: 83 },
+            name: "count" @ Span { start: 78, end: 83, line: 4, col: 17 },
             ty: TypeAnnotation {
-                name: "Int" @ Span { start: 85, end: 88 },
+                name: "Int" @ Span { start: 85, end: 88, line: 4, col: 24 },
                 args: [],
                 generic_var: None,
             },
@@ -30,14 +30,14 @@ FactDefinition {
                 InRange {
                     start: Number(
                         "1",
-                    ) @ Span { start: 95, end: 96 },
+                    ) @ Span { start: 95, end: 96, line: 4, col: 34 },
                     end: Some(
                         Number(
                             "100",
-                        ) @ Span { start: 98, end: 101 },
+                        ) @ Span { start: 98, end: 101, line: 4, col: 37 },
                     ),
-                } @ Span { start: 91, end: 102 },
+                } @ Span { start: 91, end: 102, line: 4, col: 30 },
             ),
-        } @ Span { start: 78, end: 102 },
+        } @ Span { start: 78, end: 102, line: 4, col: 17 },
     ],
-} @ Span { start: 13, end: 116 }
+} @ Span { start: 13, end: 116, line: 2, col: 13 }

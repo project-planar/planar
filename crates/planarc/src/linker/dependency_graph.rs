@@ -346,7 +346,13 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                 let import_str = fqmn_node.raw().utf8_text(source_bytes)?.to_string();
                 
                 let range = fqmn_node.range();
-                let span = Span::new(range.start_byte..range.end_byte);
+                
+                let span = Span::new(
+                    range.start_byte,
+                    range.end_byte,
+                    (range.start_point.row + 1) as u32,
+                    (range.start_point.column + 1) as u32,
+                );
                 
                 let loc = Location::new(file_id, span);
                 imports.push(Spanned::new(import_str, loc));

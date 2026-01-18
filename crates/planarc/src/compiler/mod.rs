@@ -9,6 +9,7 @@ use crate::compiler::error::CompilersError;
 use crate::linker::dependency_graph::{GraphBuilder};
 use crate::linker::linker::Linker;
 use crate::linker::linked_ast::LinkedModule;
+use crate::linker::symbol_table::SymbolTable;
 use crate::module_loader::{ModuleLoader, PackageRoot};
 use crate::lowering::error::LoweringErrors;
 use crate::linker::error::{LinkerError, LinkerErrors};
@@ -19,6 +20,7 @@ use crate::source_registry::SourceRegistry;
 pub struct CompilationResult {
     pub modules: BTreeMap<String, LinkedModule>,
     pub registry: SourceRegistry,
+    pub symbol_table: SymbolTable, 
     pub errors: CompilersError,
 }
 
@@ -78,6 +80,7 @@ impl<L: ModuleLoader + Sync> Compiler<L> {
             modules,
             registry: lowered_graph.registry,
             errors: all_errors,
+            symbol_table: linker.table
         })
     }
 }

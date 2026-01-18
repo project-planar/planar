@@ -3,10 +3,11 @@ use thiserror::Error;
 use xxhash_rust::xxh64::xxh64;
 use rkyv::Archived;
 
-use crate::artifact::model::ArchivedProgram;
+use crate::artifact::header::COMPILER_BUILDID;
+use crate::artifact::model::ArchivedBundle;
 
 use super::header::{Header, MAGIC, VERSION};
-use super::model::Program;
+use super::model::Bundle;
 
 #[derive(Error, Debug)]
 pub enum LoadError {
@@ -14,6 +15,8 @@ pub enum LoadError {
     Io(#[from] io::Error),
     #[error("Invalid magic bytes. Expected 'PDLA', got {0:?}")]
     InvalidMagic([u8; 4]),
+    #[error("Invalid build ID: expected {expected}, got {actual}")]
+    BuildIdMismatch { expected: u64, actual: u64 },
     #[error("Version mismatch: file v{file}, runtime v{runtime}")]
     VersionMismatch { file: u32, runtime: u32 },
     #[error("Checksum mismatch: expected {expected:x}, got {calculated:x}")]
@@ -22,19 +25,22 @@ pub enum LoadError {
     Truncated,
 }
 
-pub struct LoadedProgram<'a> {
-    pub archived: &'a Archived<Program>,
+pub struct LoadedBundle<'a> {
+    pub archived: &'a Archived<Bundle>,
 }
 
-pub fn load_program<'a>(
+pub fn load_bundle<'a>(
     data: &'a [u8],
-) -> Result<LoadedProgram<'a>, LoadError> {
+    build_id: Option<u64>,
+) -> Result<LoadedBundle<'a>, LoadError> {
     
-    if data.len() < 16 {
+    let build_id = build_id.unwrap_or(COMPILER_BUILDID);
+
+    if data.len() < 24 {
         return Err(LoadError::Truncated);
     }
 
-    let (header_bytes, payload) = data.split_at(16);
+    let (header_bytes, payload) = data.split_at(24);
     let header = Header::from_bytes(header_bytes.try_into().unwrap());
 
     
@@ -49,6 +55,13 @@ pub fn load_program<'a>(
             runtime: VERSION,
         });
     }
+    
+    if header.build_id != build_id {
+        return Err(LoadError::BuildIdMismatch {
+            expected: build_id,
+            actual: header.build_id,
+        });
+    }
 
     let calculated = xxh64(payload, 0);
     if calculated != header.checksum {
@@ -58,7 +71,7 @@ pub fn load_program<'a>(
         });
     }
 
-    let archived = unsafe { rkyv::access_unchecked::<ArchivedProgram>(payload) };
+    let archived = unsafe { rkyv::access_unchecked::<ArchivedBundle>(payload) };
 
-    Ok(LoadedProgram { archived })
+    Ok(LoadedBundle { archived })
 }

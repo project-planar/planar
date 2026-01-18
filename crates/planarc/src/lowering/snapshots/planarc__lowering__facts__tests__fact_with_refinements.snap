@@ -4,13 +4,13 @@ expression: ast
 ---
 FactDefinition {
     attributes: [],
-    name: "Product" @ Span { start: 18, end: 25 },
+    name: "Product" @ Span { start: 18, end: 25, line: 2, col: 18 },
     fields: [
         FactField {
             attributes: [],
-            name: "price" @ Span { start: 44, end: 49 },
+            name: "price" @ Span { start: 44, end: 49, line: 3, col: 17 },
             ty: TypeAnnotation {
-                name: "Float" @ Span { start: 51, end: 56 },
+                name: "Float" @ Span { start: 51, end: 56, line: 3, col: 24 },
                 args: [],
                 generic_var: None,
             },
@@ -19,19 +19,19 @@ FactDefinition {
                     op: ">",
                     right: Number(
                         "0",
-                    ) @ Span { start: 61, end: 62 },
-                } @ Span { start: 59, end: 62 },
+                    ) @ Span { start: 61, end: 62, line: 3, col: 34 },
+                } @ Span { start: 59, end: 62, line: 3, col: 32 },
             ),
-        } @ Span { start: 44, end: 62 },
+        } @ Span { start: 44, end: 62, line: 3, col: 17 },
         FactField {
             attributes: [],
-            name: "tags" @ Span { start: 81, end: 85 },
+            name: "tags" @ Span { start: 81, end: 85, line: 4, col: 17 },
             ty: TypeAnnotation {
-                name: "List" @ Span { start: 87, end: 91 },
+                name: "List" @ Span { start: 87, end: 91, line: 4, col: 23 },
                 args: [
                     TypeArgument {
                         ty: TypeAnnotation {
-                            name: "String" @ Span { start: 92, end: 98 },
+                            name: "String" @ Span { start: 92, end: 98, line: 4, col: 28 },
                             args: [],
                             generic_var: None,
                         },
@@ -40,27 +40,27 @@ FactDefinition {
                                 [
                                     StringLit(
                                         "\"sale\"",
-                                    ) @ Span { start: 105, end: 111 },
+                                    ) @ Span { start: 105, end: 111, line: 4, col: 41 },
                                     StringLit(
                                         "\"new\"",
-                                    ) @ Span { start: 113, end: 118 },
+                                    ) @ Span { start: 113, end: 118, line: 4, col: 49 },
                                     StringLit(
                                         "\"deprecated\"",
-                                    ) @ Span { start: 120, end: 132 },
+                                    ) @ Span { start: 120, end: 132, line: 4, col: 56 },
                                 ],
-                            ) @ Span { start: 101, end: 133 },
+                            ) @ Span { start: 101, end: 133, line: 4, col: 37 },
                         ),
-                    } @ Span { start: 92, end: 133 },
+                    } @ Span { start: 92, end: 133, line: 4, col: 28 },
                 ],
                 generic_var: None,
             },
             refinement: None,
-        } @ Span { start: 81, end: 134 },
+        } @ Span { start: 81, end: 134, line: 4, col: 17 },
         FactField {
             attributes: [],
-            name: "reliability" @ Span { start: 152, end: 163 },
+            name: "reliability" @ Span { start: 152, end: 163, line: 5, col: 17 },
             ty: TypeAnnotation {
-                name: "Float" @ Span { start: 165, end: 170 },
+                name: "Float" @ Span { start: 165, end: 170, line: 5, col: 30 },
                 args: [],
                 generic_var: None,
             },
@@ -69,9 +69,9 @@ FactDefinition {
                     op: ">",
                     right: Number(
                         "0",
-                    ) @ Span { start: 184, end: 185 },
-                } @ Span { start: 173, end: 185 },
+                    ) @ Span { start: 184, end: 185, line: 5, col: 49 },
+                } @ Span { start: 173, end: 185, line: 5, col: 38 },
             ),
-        } @ Span { start: 152, end: 185 },
+        } @ Span { start: 152, end: 185, line: 5, col: 17 },
     ],
-} @ Span { start: 13, end: 199 }
+} @ Span { start: 13, end: 199, line: 2, col: 13 }

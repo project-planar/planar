@@ -1,28 +1,31 @@
 use std::collections::BTreeMap;
 
+use rkyv::{Archive, Deserialize, Serialize};
+
 use crate::{linker::ids::{SymbolId, SymbolKind}, spanned::Location};
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
 pub struct SymbolMetadata {
     pub id: SymbolId,
     pub kind: SymbolKind,
     pub location: Location,
 }
 
+
+#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+#[rkyv(derive(Debug))]
 pub struct SymbolTable {
-    symbols: BTreeMap<String, SymbolMetadata>,
-    next_id: usize,
+    pub symbols: BTreeMap<String, SymbolMetadata>,
+    pub next_id: usize,
 }
 
 impl SymbolTable {
-    pub fn new() -> Self {
-        Self { symbols: BTreeMap::new(), next_id: 1 }
-    }
-
+    
     pub fn with_builtins() -> Self {
-        let mut table = Self::new();
+        let mut table = Self::default();
         
         for name in ["str", "i64", "f64", "bool", "list"] {
             let fqmn = format!("builtin.{}", name);

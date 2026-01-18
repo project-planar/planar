@@ -32,3 +32,4 @@ impl CompilersError {
         self.0.is_empty()
     }
 }
+

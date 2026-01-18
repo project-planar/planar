@@ -21,16 +21,17 @@ pub struct PackageInfo {
 }
 
 #[planar_node]
-#[derive(Parser, Clone, Debug, NodeSchema)]
+#[derive(Parser, Clone, Debug, NodeSchema, Default)]
+#[node(name = "dependencies")]
 pub struct DependenciesDef {
-    #[node(child, name = "dep")]
-    pub items: Vec<DependencyItem>,
+    #[node(dynamic_child)]
+    pub items: Vec<DependencyItemDef>,
 }
 
 #[planar_node]
 #[derive(Parser, Clone, Debug, NodeSchema)]
-pub struct DependencyItem {
-    #[node(child)]
+pub struct DependencyItemDef {
+    #[node(node_name)]
     pub name: String,
     
     #[node(prop)]

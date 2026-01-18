@@ -487,6 +487,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "directories"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1600,12 +1609,17 @@ dependencies = [
  "futures-util",
  "hex",
  "indicatif",
+ "kdl",
+ "miette",
+ "planar-pkg",
  "planarc",
  "reqwest",
  "serde",
  "serde_json",
  "sha2",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1624,6 +1638,7 @@ name = "planar-pkg"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "directories",
  "insta",
  "kdl",
  "miette",
@@ -1633,6 +1648,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
+ "tempfile",
  "thiserror 2.0.17",
  "tracing",
  "tree-sitter-kdl",

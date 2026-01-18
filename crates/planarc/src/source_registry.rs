@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 #[derive(Default, Debug, Clone)]
 pub struct SourceRegistry {
-    files: BTreeMap<FileId, Source>,
+    pub files: BTreeMap<FileId, Source>,
     next_id: u32,
 }
 

@@ -4,32 +4,32 @@ expression: ast
 ---
 FactDefinition {
     attributes: [],
-    name: "User" @ Span { start: 18, end: 22 },
+    name: "User" @ Span { start: 18, end: 22, line: 2, col: 18 },
     fields: [
         FactField {
             attributes: [
                 Attribute {
-                    name: "auto_id" @ Span { start: 42, end: 49 },
+                    name: "auto_id" @ Span { start: 42, end: 49, line: 3, col: 18 },
                     args: [],
-                } @ Span { start: 41, end: 50 },
+                } @ Span { start: 41, end: 50, line: 3, col: 17 },
             ],
-            name: "name" @ Span { start: 66, end: 70 },
+            name: "name" @ Span { start: 66, end: 70, line: 4, col: 17 },
             ty: TypeAnnotation {
-                name: "String" @ Span { start: 72, end: 78 },
+                name: "String" @ Span { start: 72, end: 78, line: 4, col: 23 },
                 args: [],
                 generic_var: None,
             },
             refinement: None,
-        } @ Span { start: 41, end: 78 },
+        } @ Span { start: 41, end: 78, line: 3, col: 17 },
         FactField {
             attributes: [],
-            name: "age" @ Span { start: 95, end: 98 },
+            name: "age" @ Span { start: 95, end: 98, line: 5, col: 17 },
             ty: TypeAnnotation {
-                name: "Int" @ Span { start: 100, end: 103 },
+                name: "Int" @ Span { start: 100, end: 103, line: 5, col: 22 },
                 args: [],
                 generic_var: None,
             },
             refinement: None,
-        } @ Span { start: 95, end: 103 },
+        } @ Span { start: 95, end: 103, line: 5, col: 17 },
     ],
-} @ Span { start: 13, end: 117 }
+} @ Span { start: 13, end: 117, line: 2, col: 13 }

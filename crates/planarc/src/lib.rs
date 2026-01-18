@@ -9,9 +9,8 @@ mod spanned;
 mod unit;
 mod utils;
 mod error;
-mod artifact;
 
-
+pub mod artifact;
 pub mod compiler;
 pub mod module_loader;
 pub mod common;

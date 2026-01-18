@@ -16,14 +16,24 @@ impl<'a> Ctx<'a> {
 
     pub fn spanned<T>(&self, node: &impl Node<'a>, value: T) -> Spanned<T> {
         let range = node.range();
+        
+        
+        let span = Span::new(
+            range.start_byte,
+            range.end_byte,
+            (range.start_point.row + 1) as u32,
+            (range.start_point.column + 1) as u32,
+        );
+
         Spanned {
             value,
             loc: Location {
                 file_id: self.file_id,
-                span: Span::new(range.start_byte..range.end_byte),
+                span,
             },
         }
     }
+
 
     pub fn text(&self, node: &impl Node<'a>) -> String {
         node.utf8_text(self.source.content.as_bytes())

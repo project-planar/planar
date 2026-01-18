@@ -3,12 +3,12 @@ use derive_more::Display;
 use rkyv::{Archive, Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Archive, Serialize, Deserialize, Display)]
-#[rkyv(derive(Debug))]
+#[rkyv(derive(Debug, PartialEq, Eq, PartialOrd, Ord))]
 pub struct FileId(pub u32);
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Archive, Serialize, Deserialize, Display)]
 #[rkyv(derive(Debug))]
-#[display("file id:{file_id} [{span}]")]
+#[display("{file_id} @ {span}")]
 pub struct Location {
     pub file_id: FileId,
     pub span: Span,
@@ -60,19 +60,35 @@ where
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Archive, Serialize, Deserialize, Display)]
 #[rkyv(derive(Debug))]
-#[display("{start}..{end}")]
+#[display("{line}:{col} ({start}..{end})")]
 pub struct Span {
     pub start: usize,
     pub end: usize,
+    pub line: u32,
+    pub col: u32,
 }
 
 impl Span {
-    pub fn new(range: std::ops::Range<usize>) -> Self {
-        let start = range.start;
-        let end = range.end;
-        Self { start, end }
+    
+    pub fn new(start: usize, end: usize, line: u32, col: u32) -> Self {
+        Self { 
+            start, 
+            end, 
+            line, 
+            col 
+        }
+    }
+
+    pub fn from_range(range: std::ops::Range<usize>) -> Self {
+        Self {
+            start: range.start,
+            end: range.end,
+            line: 0,
+            col: 0,
+        }
     }
 }
+
 
 impl From<Location> for miette::SourceSpan {
     fn from(loc: Location) -> Self {
@@ -80,11 +96,9 @@ impl From<Location> for miette::SourceSpan {
     }
 }
 
+
 impl From<std::ops::Range<usize>> for Span {
     fn from(value: std::ops::Range<usize>) -> Self {
-        Self {
-            start: value.start,
-            end: value.end,
-        }
+        Self::from_range(value)
     }
 }

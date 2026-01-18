@@ -1,8 +1,9 @@
-mod parser;
-mod schema;
-mod bad;
-mod var_registry;
-mod error;
-mod model;
+pub mod parser;
+pub mod schema;
+pub mod bad;
+pub mod var_registry;
+pub mod error;
+pub mod model;
 mod tests;
-mod packaging;
+pub mod packaging;
+pub mod config;

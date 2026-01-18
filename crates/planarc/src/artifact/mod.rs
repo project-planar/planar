@@ -1,29 +1,31 @@
-mod model;
-mod header;
-mod writer;
-mod reader;
+pub mod model;
+pub mod header;
+pub mod writer;
+pub mod reader;
+pub mod builder;
 
 #[cfg(test)]
 mod tests {
     use rkyv::validation::archive;
 
     use super::*;
-    use crate::artifact::model::{Program, SymbolMetadata, SymbolTable};
-    use crate::artifact::reader::{LoadError, load_program};
-    use crate::artifact::writer::write_program;
+    use crate::artifact::model::Bundle;
+    use crate::artifact::reader::{LoadError, load_bundle};
+    use crate::artifact::writer::write_bundle;
     use crate::linker::linked_ast::{LinkedFact, LinkedField, LinkedModule, LinkedTypeReference};
     use crate::linker::ids::{ResolvedId, SymbolId, SymbolKind};
+    use crate::linker::symbol_table::{SymbolMetadata, SymbolTable};
     use crate::spanned::{FileId, Location, Span, Spanned};
     use std::collections::BTreeMap;
 
-    fn create_test_program() -> Program {
+    fn create_test_program() -> Bundle {
         let file_id = FileId(42);
         let mut modules = BTreeMap::new();
         
         let type_ref = LinkedTypeReference {
             symbol: Spanned::new(
-                ResolvedId::Global(Spanned::new(SymbolId(100), Location { file_id, span: Span { start: 0, end: 5 } })),
-                Location { file_id, span: Span { start: 0, end: 5 } }
+                ResolvedId::Global(Spanned::new(SymbolId(100), Location { file_id, span: Span { start: 0, end: 5, ..Default::default() } })),
+                Location { file_id, span: Span { start: 0, end: 5, ..Default::default() } }
             ),
             args: vec![],
             generic_var: Some("T".to_string()),
@@ -34,7 +36,7 @@ mod tests {
             name: "id".to_string(),
             ty: type_ref,
             refinement: None,
-        }, Location { file_id, span: Span { start: 10, end: 20 } });
+        }, Location { file_id, span: Span { start: 10, end: 20, ..Default::default() } });
 
         modules.insert("core".to_string(), LinkedModule {
             file_id,
@@ -43,7 +45,7 @@ mod tests {
                 attributes: vec![],
                 name: "Base".to_string(),
                 fields: vec![field],
-            }, Location { file_id, span: Span { start: 0, end: 100 } })],
+            }, Location { file_id, span: Span { start: 0, end: 100, ..Default::default() } })],
             types: vec![],
         });
 
@@ -51,17 +53,19 @@ mod tests {
         symbols.insert("core.Base".to_string(), SymbolMetadata {
             id: SymbolId(1),
             kind: SymbolKind::Fact,
-            location: Location { file_id, span: Span { start: 0, end: 100 } },
+            location: Location { file_id, span: Span { start: 0, end: 100, ..Default::default() } },
         });
 
 
         let mut wasm_modules = BTreeMap::new();
         wasm_modules.insert("logic".to_string(), vec![0xDE, 0xAD, 0xBE, 0xEF]);
 
-        Program {
+        
+        Bundle {
             symbol_table: SymbolTable { symbols, next_id: 2 },
             modules,
             wasm_modules,
+            files: BTreeMap::new()
         }
     }
 
@@ -71,10 +75,10 @@ mod tests {
         let mut buffer = Vec::new();
         
         
-        write_program(&original, &mut buffer).expect("Writing failed");
+        write_bundle(&original, &mut buffer, Some(1337)).expect("Writing failed");
         
     
-        let loaded = load_program(&buffer).expect("Loading failed");
+        let loaded = load_bundle(&buffer, Some(1337)).expect("Loading failed");
         let archived = loaded.archived;
 
         assert_eq!(archived.symbol_table.next_id, 2);
@@ -98,7 +102,7 @@ mod tests {
     fn test_error_truncated_file() {
         
         let data = vec![b'P', b'D', b'L', b'A', 0, 0, 0, 1];
-        let result = load_program(&data);
+        let result = load_bundle(&data, Some(1337));
         assert!(matches!(result, Err(LoadError::Truncated)));
     }
 
@@ -106,11 +110,11 @@ mod tests {
     fn test_error_invalid_magic() {
         let prog = create_test_program();
         let mut buf = Vec::new();
-        write_program(&prog, &mut buf).unwrap();
+        write_bundle(&prog, &mut buf, Some(1337)).unwrap();
 
         buf[0] = b'N'; buf[1] = b'O'; buf[2] = b'P'; buf[3] = b'E';
 
-        let result = load_program(&buf);
+        let result = load_bundle(&buf, Some(1337));
         match result {
             Err(LoadError::InvalidMagic(m)) => assert_eq!(&m, b"NOPE"),
             _ => panic!("Should have failed with InvalidMagic"),
@@ -121,11 +125,11 @@ mod tests {
     fn test_error_version_mismatch() {
         let prog = create_test_program();
         let mut buf = Vec::new();
-        write_program(&prog, &mut buf).unwrap();
+        write_bundle(&prog, &mut buf, Some(1337)).unwrap();
 
         buf[4] = 0xFE; buf[5] = 0xCA;
 
-        let result = load_program(&buf);
+        let result = load_bundle(&buf, Some(1337));
         assert!(matches!(result, Err(LoadError::VersionMismatch { .. })));
     }
 
@@ -133,12 +137,12 @@ mod tests {
     fn test_error_checksum_body_corrupted() {
         let prog = create_test_program();
         let mut buf = Vec::new();
-        write_program(&prog, &mut buf).unwrap();
+        write_bundle(&prog, &mut buf, Some(1337)).unwrap();
 
         let idx = buf.len() - 5;
         buf[idx] = !buf[idx];
 
-        let result = load_program(&buf);
+        let result = load_bundle(&buf, Some(1337));
         match result {
             Err(LoadError::ChecksumMismatch { .. }) => {} // OK
             _ => panic!("Should have detected body corruption via checksum"),
@@ -149,25 +153,27 @@ mod tests {
     fn test_error_checksum_header_tampered() {
         let prog = create_test_program();
         let mut buf = Vec::new();
-        write_program(&prog, &mut buf).unwrap();
+        write_bundle(&prog, &mut buf, Some(1337)).unwrap();
 
-        buf[8] = buf[8].wrapping_add(1);
+        buf[16] = buf[16].wrapping_add(1);
 
-        let result = load_program(&buf);
+        let result = load_bundle(&buf, Some(1337));
+        
         assert!(matches!(result, Err(LoadError::ChecksumMismatch { .. })));
     }
 
     #[test]
     fn test_empty_program_works() {
-        let prog = Program {
-            symbol_table: SymbolTable { symbols: BTreeMap::new(), next_id: 0 },
+        let prog = Bundle {
+            symbol_table: SymbolTable::default(),
             modules: BTreeMap::new(),
             wasm_modules: BTreeMap::new(),
+            files: BTreeMap::new()
         };
         let mut buf = Vec::new();
-        write_program(&prog, &mut buf).unwrap();
+        write_bundle(&prog, &mut buf, Some(1337)).unwrap();
 
-        let loaded = load_program(&buf).expect("Empty program should be valid");
+        let loaded = load_bundle(&buf, Some(1337)).expect("Empty program should be valid");
         assert!(loaded.archived.modules.is_empty());
     }
 
@@ -177,9 +183,9 @@ mod tests {
 
         
         let mut buffer = Vec::new();
-        write_program(&original, &mut buffer).expect("Failed to write");
+        write_bundle(&original, &mut buffer, Some(1337)).expect("Failed to write");
 
-        let loaded = load_program(&buffer).expect("Failed to load");
+        let loaded = load_bundle(&buffer, Some(1337)).expect("Failed to load");
         let archived = loaded.archived;
 
         insta::assert_debug_snapshot!("program_roundtrip", (&original, archived));

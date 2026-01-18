@@ -17,3 +17,7 @@ planarc = { workspace = true }
 tree-sitter-kdl = { git = "https://github.com/Tam1SH/tree-sitter-kdl", branch = "downgrade"}
 strum = { version = "0.27.2", features = ["derive"] }
 tracing = "0.1.44"
+directories = "6.0.0"
+
+[dev-dependencies]
+tempfile = { workspace = true }
