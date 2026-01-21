@@ -1,6 +1,7 @@
+use crate::lowering::common::{lower_attribute, lower_expression_union};
 use crate::lowering::ctx::Ctx;
 use crate::lowering::type_decl::{
-    lower_expression_union, lower_refinement_union, lower_type_annotation,
+    lower_type_annotation,
 };
 use crate::pdl;
 use crate::{
@@ -51,15 +52,26 @@ fn lower_fact_field<'a>(
         attributes.push(lower_attribute(ctx, child_res?)?);
     }
 
-    let name = &node.name()?;
-    let name = ctx.spanned(name, ctx.text(name));
-    let ty = lower_type_annotation(ctx, node.r#type()?)?;
+    let name_node = node.name()?;
+    let name = ctx.spanned(&name_node, ctx.text(&name_node));
+    
+    let type_node = node.r#type()?;
+    let ty = lower_type_annotation(ctx, type_node)?;
 
-    let refinement = if let Some(ref_node_res) = node.refinement() {
-        Some(lower_refinement_union(ctx, ref_node_res?.child()?)?)
-    } else {
-        None
-    };
+    let mut refinement = None;
+    let mut type_cursor = type_node.walk();
+
+    
+    for child_res in type_node.children(&mut type_cursor) {
+        use pdl::anon_unions::Refinement_TypeAnnotation_TypeApplication_TypeIdentifier as TypeChild;
+        if let TypeChild::Refinement(ref_node) = child_res? {
+            let mut ref_cursor = ref_node.walk();
+            if let Some(expr_res) = ref_node.children(&mut ref_cursor).next() {
+                refinement = Some(lower_expression_union(ctx, expr_res?)?);
+            }
+            break;
+        }
+    }
 
     Ok(ctx.spanned(
         &node,
@@ -72,22 +84,6 @@ fn lower_fact_field<'a>(
     ))
 }
 
-fn lower_attribute<'a>(
-    ctx: &Ctx<'a>,
-    node: pdl::Attribute<'a>,
-) -> NodeResult<'a, Spanned<Attribute>> {
-    let name = &node.name()?;
-    let name = ctx.spanned(name, ctx.text(name));
-    let mut args = Vec::new();
-
-    let mut cursor = node.walk();
-
-    for arg_res in node.others(&mut cursor) {
-        args.push(lower_expression_union(ctx, arg_res?)?);
-    }
-
-    Ok(ctx.spanned(&node, Attribute { name, args }))
-}
 
 #[cfg(test)]
 mod tests {

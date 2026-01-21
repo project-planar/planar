@@ -1,10 +1,12 @@
-mod error;
+pub mod error;
 use anyhow::{Context, Result};
-use std::collections::{BTreeMap, HashSet};
+use tracing::{debug, info, instrument, trace, warn};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::DynamicLanguageLoader;
 use crate::compiler::error::CompilersError;
 use crate::linker::dependency_graph::{GraphBuilder};
 use crate::linker::linker::Linker;
@@ -14,14 +16,17 @@ use crate::module_loader::{ModuleLoader, PackageRoot};
 use crate::lowering::error::LoweringErrors;
 use crate::linker::error::{LinkerError, LinkerErrors};
 use crate::source_registry::SourceRegistry;
+use crate::validator::grammar_registry::GrammarRegistry;
+use crate::validator::query_validator::QueryValidator;
+use crate::validator::wit_validator::WitValidator;
 
 
-#[derive(Debug)]
 pub struct CompilationResult {
     pub modules: BTreeMap<String, LinkedModule>,
     pub registry: SourceRegistry,
     pub symbol_table: SymbolTable, 
     pub errors: CompilersError,
+    pub grammars: GrammarRegistry,
 }
 
 impl CompilationResult {
@@ -48,39 +53,101 @@ impl<L: ModuleLoader + Sync> Compiler<L> {
         self
     }
 
-    pub fn compile(&self, roots: Vec<PackageRoot>) -> miette::Result<CompilationResult> {
+    
+    #[instrument(
+        skip(self, roots, paths), 
+        fields(
+            root_count = roots.len(), 
+            grammar_count = paths.len()
+        )
+    )]
+    pub fn compile(
+        &self, 
+        roots: Vec<PackageRoot>, 
+        paths: BTreeMap<String, PathBuf>
+    ) -> miette::Result<CompilationResult> {
         
         // 1. Discovery 
+        debug!("Phase 1: Discovery. Scanning package roots...");
         let builder = GraphBuilder::new(&self.loader);
         let dep_graph = builder.build(&roots)?; 
+        info!(module_count = dep_graph.modules.len(), "Discovery finished");
 
         // 2. Lowering
+        debug!("Phase 2: Lowering AST...");
         let (lowered_graph, lowering_errors) = dep_graph.lower();
+        trace!(errors = lowering_errors.0.len(), "Lowering finished");
 
         // 3. Linking
+        debug!("Phase 3: Linking definitions and symbols...");
         let mut linker = Linker::new(self.prelude.clone());
         let definition_errors = linker.collect_definitions(&lowered_graph);
+        debug!(symbols = linker.table.symbols.len(), "Symbol table populated");
 
         let mut modules = BTreeMap::new();
         let mut linking_errors = LinkerErrors::new(vec![]);
 
         for (fqmn, module_ast) in &lowered_graph.modules {
+            let _span = tracing::debug_span!("link_module", module = %fqmn).entered();
             let (linked_mod, mod_errors) = linker.link_module(fqmn, module_ast, &lowered_graph.registry);
             linking_errors.extend(mod_errors);
             modules.insert(fqmn.clone(), linked_mod);
         }
 
-        // 4. Errors aggregation
-        let mut all_errors = CompilersError::new();
+        // 4. Grammar Loading
+        debug!("Phase 4: Initializing Grammar Registry...");
+        for (name, path) in &paths {
+            trace!(grammar = %name, path = ?path, "Registering grammar binary");
+        }
+
+        let grammar_registry = GrammarRegistry::new_with_paths(
+            Box::new(DynamicLanguageLoader::default()), 
+            paths
+        );
+
+        // 5. Validation
+        debug!("Phase 5: Validation (Wit & Queries)...");
+        let wit_validator = WitValidator {
+            table: &linker.table,
+            registry: &lowered_graph.registry,
+        };
+
+        let query_validator = QueryValidator {
+            registry: &lowered_graph.registry,
+            grammars: &grammar_registry,
+        };
+
+        let mut validation_errors = Vec::new();
+
+        for (fqmn, linked_mod) in &modules {
+            let _span = tracing::debug_span!("validate_module", module = %fqmn).entered();
+            
+            let wit_errs = wit_validator.validate_module(linked_mod);
+            validation_errors.extend(wit_errs.0);
+
+            let query_errs = query_validator.validate_module(linked_mod);
+            validation_errors.extend(query_errs.0);
+        }
+
+        // 6. Finalizing
+        let mut all_errors = CompilersError::default();
         all_errors.extend(lowering_errors.0);
         all_errors.extend(definition_errors.0);
         all_errors.extend(linking_errors.0);
+        all_errors.extend(validation_errors);
+
+        if all_errors.is_empty() {
+            info!(status = "success", modules = modules.len(), "Compilation finished successfully");
+        } else {
+            warn!(status = "failed", error_count = all_errors.0.len(), "Compilation finished with errors");
+        }
 
         Ok(CompilationResult {
             modules,
             registry: lowered_graph.registry,
             errors: all_errors,
-            symbol_table: linker.table
+            symbol_table: linker.table,
+            grammars: grammar_registry
         })
     }
 }
@@ -92,6 +159,7 @@ mod tests {
     use std::fs;
     use std::collections::HashMap;
     use tempfile::TempDir;
+    use crate::loader::MockLanguageLoader;
     use crate::module_loader::FsModuleLoader;
     use crate::linker::ids::ResolvedId;
 
@@ -132,7 +200,7 @@ mod tests {
         
         let compiler = Compiler::new(loader).with_prelude(vec![]); 
         
-        compiler.compile(roots).expect("Compilation infrastructure failed")
+        compiler.compile(roots, BTreeMap::new()).expect("Compilation infrastructure failed")
     }
 
     #[test]

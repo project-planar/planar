@@ -209,7 +209,7 @@ pub struct TargetDef {
     pub resolution: Option<ResolutionDef>,
 }
 
-// Универсальный include для файлов
+
 #[planar_node]
 #[derive(Parser, Clone, Debug, NodeSchema)]
 #[node(name = "include")]
@@ -278,7 +278,6 @@ pub struct ImportPeersDef {
     pub as_namespace: Option<bool>,
 }
 
-// Полиморфизм для биндингов: bind-file ИЛИ bind-scope
 #[planar_node]
 #[derive(Parser, Clone, Debug, NodeSchema)]
 pub enum BindingDef {
@@ -316,7 +315,6 @@ pub struct BindScopeDef {
 #[derive(Parser, Clone, Debug, NodeSchema)]
 #[node(name = "env")]
 pub struct EnvSectionDef {
-    // Полиморфный список: load-file ИЛИ var
     #[node(child)]
     pub items: Vec<EnvItemDef>,
 }

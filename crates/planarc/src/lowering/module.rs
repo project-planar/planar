@@ -1,7 +1,9 @@
 use crate::lowering::ctx::Ctx;
 use crate::lowering::error::LoweringErrors;
+use crate::lowering::extern_funcs::lower_extern_definition;
 use crate::lowering::facts::lower_fact_definition;
 use crate::lowering::import::lower_import;
+use crate::lowering::query::lower_query_definition;
 use crate::lowering::type_decl::lower_type_declaration;
 use crate::module_loader::Source;
 use crate::pdl;
@@ -22,7 +24,7 @@ pub fn lower_module(
         Err(e) => {
             return (
                 Module::default(),
-                LoweringErrors::new(vec![LoweringError::from_incorrect_kind(e, source)]),
+                LoweringErrors::new(vec![LoweringError::from_incorrect_kind(e, source, &ctx)]),
             );
         }
     };
@@ -31,6 +33,8 @@ pub fn lower_module(
     let mut imports = Vec::new();
     let mut facts = Vec::new();
     let mut types = Vec::new();
+    let mut externs = Vec::new();
+    let mut queries = Vec::new();
 
     let mut cursor = root.walk();
 
@@ -42,46 +46,56 @@ pub fn lower_module(
                 
                 if child_union.raw().has_error() {
                     
-                    errors.extend(LoweringError::collect_from_tree(*child_union.raw(), source));
+                    errors.extend(LoweringError::collect_from_tree(*child_union.raw(), source, &ctx));
                 }
 
                 match child_union {
                     U::ImportDefinition(node) => match lower_import(&ctx, node) {
                         Ok(i) => imports.push(i),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source)),
-                    },
+                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
+                    }
                     U::FactDefinition(node) => match lower_fact_definition(&ctx, node) {
                         Ok(f) => facts.push(f),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source)),
-                    },
+                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
+                    }
                     U::TypeDeclaration(node) => match lower_type_declaration(&ctx, node) {
                         Ok(t) => types.push(t),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source)),
-                    },
+                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
+                    }
+                    U::ExternDefinition(node) => match lower_extern_definition(&ctx, node) {
+                        Ok(e) => externs.push(e),
+                        Err(err) => errors.push(LoweringError::from_incorrect_kind(err, source, &ctx)),
+                    }
+                    U::QueryDefinition(node) => match lower_query_definition(&ctx, node) {
+                        Ok(e) => queries.push(e),
+                        Err(err) => errors.push(LoweringError::from_incorrect_kind(err, source, &ctx)),
+                    }
                     _ => {}
                 }
             }
             Err(incorrect_kind) => {
                 
                 if incorrect_kind.node.has_error() || incorrect_kind.node.is_error() {
-                    errors.extend(LoweringError::collect_from_tree(*incorrect_kind.node.raw(), source));
+                    errors.extend(LoweringError::collect_from_tree(*incorrect_kind.node.raw(), source, &ctx));
                 } else {
                     
-                    errors.push(LoweringError::from_incorrect_kind(incorrect_kind, source));
+                    errors.push(LoweringError::from_incorrect_kind(incorrect_kind, source, &ctx));
                 }
             }
         }
     }
 
     if root.raw().has_error() && errors.is_empty() {
-        errors.extend(LoweringError::collect_from_tree(*root.raw(), source));
+        errors.extend(LoweringError::collect_from_tree(*root.raw(), source, &ctx));
     }
 
     (
         Module {
             imports,
             facts,
+            externs,
             types,
+            queries,
             file_id,
         },
         LoweringErrors::new(errors),

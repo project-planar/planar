@@ -15,6 +15,7 @@ pub fn create_bundle(compilation: CompilationResult) -> Bundle {
         symbol_table: compilation.symbol_table,
         modules: compilation.modules,
         wasm_modules,
-        files
+        files,
+        grammars: compilation.grammars.to_metadata()
     }
 }

@@ -4,6 +4,7 @@ use crate::linker::dependency_graph::LoweredGraph;
 use crate::linker::error::{AmbiguousCandidate, LinkerError, LinkerErrors, PreviousDefinition};
 use crate::linker::ids::{ResolvedId, SymbolId, SymbolKind};
 use crate::linker::linked_ast::*;
+use crate::linker::resolver::ResolverContext;
 use crate::linker::symbol_table::{SymbolMetadata, SymbolTable};
 use crate::source_registry::SourceRegistry;
 use crate::spanned::{Location, Spanned};
@@ -48,6 +49,40 @@ impl Linker {
                     errors.push(self.create_collision_error(&fqmn, loc, prev_loc, &graph.registry));
                 }
             }
+
+            for query in &module.queries {
+                let fqmn = format!("{}.{}", module_name, query.value.name.value);
+                
+                if let Err(prev_loc) = self.table.insert(
+                    &fqmn, 
+                    SymbolKind::Query, 
+                    query.loc
+                ) {
+                    errors.push(self.create_collision_error(&fqmn, query.loc, prev_loc, &graph.registry));
+                }
+            }
+
+
+            for ext in &module.externs {
+                
+                let is_builtin_block = ext.value.attributes.iter()
+                    .any(|a| a.value.name.value == "builtin");
+
+                for func in &ext.value.functions {
+                    let loc = func.value.name.loc;
+                    
+                    let fqmn = if is_builtin_block {
+                        format!("builtin.{}", func.value.name.value)
+                    } else {
+                        format!("{}.{}", module_name, func.value.name.value)
+                    };
+
+                    if let Err(prev_loc) = self.table.insert(&fqmn, SymbolKind::ExternFunction, loc) {
+                        errors.push(self.create_collision_error(&fqmn, loc, prev_loc, &graph.registry));
+                    }
+                }
+            }
+
         }
         LinkerErrors(errors)
     }
@@ -72,410 +107,38 @@ impl Linker {
 
         let facts = module.facts.iter().map(|f| ctx.resolve_fact(&f.value, f.loc)).collect();
         let types = module.types.iter().map(|t| ctx.resolve_type_decl(&t.value, t.loc)).collect();
+        let externs = module.externs.iter().map(|t| ctx.resolve_extern_definition(&t.value, t.loc)).collect();
+        let queries = module.queries.iter().map(|q| ctx.resolve_query(&q.value, q.loc)).collect();
 
         let linked = LinkedModule {
             file_id: module.file_id,
             facts,
+            externs,
             types,
+            queries
         };
 
         (linked, LinkerErrors(ctx.errors))
     }
 
     fn create_collision_error(&self, name: &str, loc: Location, prev_loc: Location, reg: &SourceRegistry) -> LinkerError {
-        let (src, span) = get_source_and_span(loc, reg);
-        let (p_src, p_span) = get_source_and_span(prev_loc, reg);
+        let (src, span) = reg.get_source_and_span(loc);
+        let (p_src, p_span) = reg.get_source_and_span(prev_loc);
         LinkerError::SymbolCollision {
             name: name.to_string(),
             src,
             span,
-            related: vec![PreviousDefinition { src: p_src, span: p_span }],
-        }
-    }
-}
-
-fn get_source_and_span(loc: Location, registry: &SourceRegistry) -> (NamedSource<String>, SourceSpan) {
-    let source = registry.get(loc.file_id).expect("Invalid file_id");
-    let named_source = NamedSource::new(source.origin.clone(), source.content.clone());
-    let span = SourceSpan::new(loc.span.start.into(), loc.span.end - loc.span.start);
-    (named_source, span)
-}
-
-struct ResolverContext<'a> {
-    linker: &'a Linker,
-    current_module: &'a str,
-    registry: &'a SourceRegistry,
-    imports: &'a [String],
-    errors: Vec<LinkerError>,
-}
-
-impl<'a> ResolverContext<'a> {
-
-    #[instrument(skip(self, loc, scope), fields(module = self.current_module))]
-    fn lookup(&mut self, name: &str, loc: Location, scope: &[String]) -> ResolvedId {
-        trace!(target: "linker::lookup", symbol = name, "Starting lookup sequence");
-        
-        if scope.contains(&name.to_string()) {
-            trace!(target: "linker::lookup", symbol = name, strategy = "local_scope", "Resolved as Local variable");
-            return ResolvedId::Local(Spanned::new(name.to_string(), loc));
-        }
-
-        if let Some((id, def_loc)) = self.linker.table.resolve(name) {
-             self.trace_success("absolute_fqmn", name, id, def_loc);
-             return ResolvedId::Global(Spanned::new(id, def_loc));
-        }
-
-        let mut candidates = Vec::new();
-
-        for import_path in self.imports {
-            
-            if let Some(last_segment) = import_path.split('.').next_back() {
-                let prefix = format!("{}.", last_segment);
-                
-                if name.starts_with(&prefix) {
-                    let suffix = &name[prefix.len()..];
-                    let fqmn = format!("{}.{}", import_path, suffix);
-                    
-                    if let Some((id, def_loc)) = self.linker.table.resolve(&fqmn) {
-                        trace!(target: "linker::lookup", candidate = %fqmn, via = %import_path, "Candidate found via import suffix");
-                        candidates.push((fqmn, id, def_loc, import_path.as_str()));
-                    }
-                }
-                else if name == last_segment {
-                    if let Some((id, def_loc)) = self.linker.table.resolve(import_path) {
-                         trace!(target: "linker::lookup", candidate = %import_path, via = %import_path, "Candidate found via direct alias");
-                         candidates.push((import_path.clone(), id, def_loc, import_path.as_str()));
-                    }
-                }
-            }
-
-            let implicit_member_fqmn = format!("{}.{}", import_path, name);
-            
-            if let Some((id, def_loc)) = self.linker.table.resolve(&implicit_member_fqmn) {
-                trace!(
-                    target: "linker::lookup", 
-                    candidate = %implicit_member_fqmn, 
-                    via = %import_path, 
-                    "Candidate found via implicit module member access"
-                );
-                candidates.push((implicit_member_fqmn, id, def_loc, import_path.as_str()));
-            }
-
-        }
-
-        
-        let current_fqmn = format!("{}.{}", self.current_module, name);
-        if let Some((id, def_loc)) = self.linker.table.resolve(&current_fqmn) {
-            if !candidates.iter().any(|(c, ..)| c == &current_fqmn) {
-                 trace!(target: "linker::lookup", candidate = %current_fqmn, "Candidate found in current module");
-                 candidates.push((current_fqmn, id, def_loc, self.current_module));
-            }
-        }
-
-        
-        if let Some((parent_pkg, _)) = self.current_module.rsplit_once('.') {
-            let sibling_fqmn = format!("{}.{}", parent_pkg, name);
-             if let Some((id, def_loc)) = self.linker.table.resolve(&sibling_fqmn) {
-                
-                if !candidates.iter().any(|(c, ..)| c == &sibling_fqmn) {
-                    trace!(target: "linker::lookup", candidate = %sibling_fqmn, "Candidate found via sibling lookup");
-                    candidates.push((sibling_fqmn, id, def_loc, "sibling"));
-                }
-            }
-        }
-
-        
-        if candidates.is_empty() {
-            for prelude_pkg in &self.linker.prelude {
-                let prelude_fqmn = format!("{}.{}", prelude_pkg, name);
-                if let Some((id, def_loc)) = self.linker.table.resolve(&prelude_fqmn) {
-                     trace!(target: "linker::lookup", candidate = %prelude_fqmn, via = "prelude", "Candidate found via prelude");
-                     candidates.push((prelude_fqmn, id, def_loc, "prelude"));
-                }
-            }
-        }
-
-        
-        if candidates.len() == 1 {
-            let (fqmn, id, def_loc, strategy) = candidates.remove(0);
-            self.trace_success(&format!("resolved_candidate({})", strategy), &fqmn, id, def_loc);
-            return ResolvedId::Global(Spanned::new(id, def_loc));
-        } else if candidates.len() > 1 {
-            
-            let initial_len = candidates.len();
-            candidates.sort_by(|a, b| a.0.cmp(&b.0));
-            candidates.dedup_by(|a, b| a.0 == b.0);
-            
-            if candidates.len() < initial_len {
-                trace!(target: "linker::lookup", dropped = initial_len - candidates.len(), "Deduplicated identical candidates");
-            }
-
-            if candidates.len() == 1 {
-                let (fqmn, id, def_loc, strategy) = candidates.remove(0);
-                self.trace_success(&format!("deduplicated_to_single({})", strategy), &fqmn, id, def_loc);
-                return ResolvedId::Global(Spanned::new(id, def_loc));
-            }
-            
-            warn!(target: "linker::lookup", symbol = name, count = candidates.len(), ?candidates, "Ambiguous reference detected");
-            return self.report_ambiguity(name, loc, candidates);
-        }
-
-        
-        let builtin_fqmn = format!("builtin.{}", name);
-        if let Some((id, def_loc)) = self.linker.table.resolve(&builtin_fqmn) {
-            self.trace_success("builtin_fallback", &builtin_fqmn, id, def_loc);
-            return ResolvedId::Global(Spanned::new(id, def_loc));
-        }
-
-        debug!(target: "linker::lookup", symbol = name, "Symbol not found in any scope");
-
-        let all_symbols = self.linker.table.debug_keys();
-        
-        let similar: Vec<_> = all_symbols.iter()
-            .filter(|s| s.contains(name) || name.contains(s.as_str()))
-            .collect();
-
-        debug!(
-            target: "linker::lookup",
-            total_symbols = all_symbols.len(),
-            ?all_symbols,
-            ?similar,     
-            "Dumping symbol table for debug"
-        );
-
-        self.report_unknown(name, loc)
-    }
-    
-    
-    fn trace_success(&self, strategy: &str, fqmn: &str, id: SymbolId, loc: Location) {
-        let origin = self.registry.get(loc.file_id)
-            .map(|s| s.origin.as_str())
-            .unwrap_or("<unknown>");
-            
-        debug!(
-            target: "linker::lookup",
-            strategy,
-            fqmn,
-            %id,
-            defined_in = %origin,
-            "Symbol resolved successfully"
-        );
-    }
-
-    fn report_ambiguity(&mut self, name: &str, loc: Location, candidates: Vec<(String, SymbolId, Location, &str)>) -> ResolvedId {
-        let (src, span) = get_source_and_span(loc, self.registry);
-        let related = candidates.into_iter().map(|(_, _, d_loc, mod_name)| {
-            let (c_src, c_span) = get_source_and_span(d_loc, self.registry);
-            AmbiguousCandidate { module_name: mod_name.to_string(), src: c_src, span: c_span }
-        }).collect();
-        self.errors.push(LinkerError::AmbiguousReference { name: name.to_string(), src, span, candidates: related });
-        ResolvedId::Unknown(name.to_string())
-    }
-
-    fn report_unknown(&mut self, name: &str, loc: Location) -> ResolvedId {
-        let (src, span) = get_source_and_span(loc, self.registry);
-        self.errors.push(LinkerError::UnknownSymbol { name: name.to_string(), src, span });
-        ResolvedId::Unknown(name.to_string())
-    }
-
-
-    fn resolve_fact(
-        &mut self,
-        fact: &ast::FactDefinition,
-        loc: crate::spanned::Location,
-    ) -> Spanned<LinkedFact> {
-        let fqmn = format!("{}.{}", self.current_module, fact.name.value);
-        let id = self
-            .linker
-            .table
-            .resolve(&fqmn)
-            .map(|(id, _)| id)
-            .unwrap_or(SymbolId(0));
-
-        let fields = fact
-            .fields
-            .iter()
-            .map(|f| {
-                
-                let linked_ty = self.resolve_type_ref(&f.value.ty, f.loc);
-
-                
-                let refinement = if let Some(expr) = &f.value.refinement {
-                    
-                    let scope = if let Some(v) = &f.value.ty.generic_var {
-                        vec![v.clone()]
-                    } else {
-                        vec![]
-                    };
-                    Some(self.resolve_expr(&expr.value, expr.loc, &scope))
-                } else {
-                    None
-                };
-
-                Spanned::new(
-                    LinkedField {
-                        attributes: vec![],
-                        name: f.value.name.value.clone(),
-                        ty: linked_ty,
-                        refinement,
-                    },
-                    f.loc,
-                )
-            })
-            .collect();
-
-        Spanned::new(
-            LinkedFact {
-                id,
-                attributes: vec![],
-                name: fact.name.value.clone(),
-                fields,
-            },
             loc,
-        )
-    }
-
-    fn resolve_type_ref(
-        &mut self,
-        ty: &ast::TypeAnnotation,
-        loc: crate::spanned::Location,
-    ) -> LinkedTypeReference {
-        
-        let symbol = self.lookup(&ty.name.value, ty.name.loc, &[]);
-
-        
-        let args = ty
-            .args
-            .iter()
-            .map(|arg| {
-                let linked_arg_ty = self.resolve_type_ref(&arg.value.ty, arg.value.ty.name.loc);
-
-                let refinement = if let Some(expr) = &arg.value.refinement {
-                    
-                    let scope = if let Some(v) = &arg.value.ty.generic_var {
-                        vec![v.clone()]
-                    } else {
-                        vec![]
-                    };
-                    Some(self.resolve_expr(&expr.value, expr.loc, &scope))
-                } else {
-                    None
-                };
-
-                Spanned::new(
-                    LinkedTypeArgument {
-                        ty: linked_arg_ty,
-                        refinement,
-                    },
-                    arg.loc,
-                )
-            })
-            .collect();
-
-        LinkedTypeReference {
-            symbol: Spanned::new(symbol, ty.name.loc),
-            args,
-            generic_var: ty.generic_var.clone(),
+            related: vec![PreviousDefinition { src: p_src, span: p_span, loc: prev_loc }],
         }
     }
-
-    fn resolve_type_decl(
-        &mut self,
-        ty: &ast::TypeDeclaration,
-        loc: crate::spanned::Location,
-    ) -> Spanned<LinkedType> {
-
-        let fqmn = format!("{}.{}", self.current_module, ty.name.value);
-        
-        let id = self
-            .linker
-            .table
-            .resolve(&fqmn)
-            .map(|(id, _)| id)
-            .unwrap_or(SymbolId(0));
-
-        let linked_ty = self.resolve_type_ref(&ty.ty, loc);
-
-        let refinement = if let Some(expr) = &ty.refinement {
-            let scope = if let Some(v) = &ty.ty.generic_var {
-                vec![v.clone()]
-            } else {
-                vec![]
-            };
-            Some(self.resolve_expr(&expr.value, expr.loc, &scope))
-        } else {
-            None
-        };
-
-        Spanned::new(
-            LinkedType {
-                id,
-                name: ty.name.value.clone(),
-                ty: linked_ty,
-                refinement,
-            },
-            loc,
-        )
-    }
-
-    fn resolve_expr(
-        &mut self,
-        expr: &Expression,
-        loc: crate::spanned::Location,
-        scope: &[String],
-    ) -> Spanned<LinkedExpression> {
-        let linked = match expr {
-            Expression::Identifier(name) => {
-                LinkedExpression::Identifier(self.lookup(name, loc, scope))
-            }
-            Expression::Number(n) => LinkedExpression::Number(n.clone()),
-            Expression::StringLit(s) => LinkedExpression::StringLit(s.clone()),
-
-            Expression::Call { function, args } => {
-                let symbol = self.lookup(function, loc, scope);
-                LinkedExpression::Call {
-                    symbol: Spanned::new(symbol, loc),
-                    args: args
-                        .iter()
-                        .map(|a| self.resolve_expr(&a.value, a.loc, scope))
-                        .collect(),
-                }
-            }
-
-            Expression::Binary { left, op, right } => LinkedExpression::Binary {
-                left: Box::new(self.resolve_expr(&left.value, left.loc, scope)),
-                op: op.clone(),
-                right: Box::new(self.resolve_expr(&right.value, right.loc, scope)),
-            },
-
-            Expression::InList(items) => LinkedExpression::InList(
-                items
-                    .iter()
-                    .map(|i| self.resolve_expr(&i.value, i.loc, scope))
-                    .collect(),
-            ),
-
-            Expression::InRange { start, end } => LinkedExpression::InRange {
-                start: Box::new(self.resolve_expr(&start.value, start.loc, scope)),
-                end: end
-                    .as_ref()
-                    .map(|e| Box::new(self.resolve_expr(&e.value, e.loc, scope))),
-            },
-
-            Expression::PartialComparison { op, right } => LinkedExpression::PartialComparison {
-                op: op.clone(),
-                right: Box::new(self.resolve_expr(&right.value, right.loc, scope)),
-            },
-        };
-        Spanned::new(linked, loc)
-    }
-
 }
+
 
 
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use std::collections::BTreeMap;
     use std::path::PathBuf;
@@ -499,7 +162,7 @@ mod tests {
         parser
     }
     
-    fn setup_project(files: &[(&str, &str)], _entry: &str) -> (LoweredGraph, Linker) {
+    pub fn setup_project(files: &[(&str, &str)], _entry: &str) -> (LoweredGraph, Linker) {
         
         let mut mock_files = BTreeMap::new();
 
@@ -613,20 +276,24 @@ mod tests {
         let files = [
             ("std", "type Val = builtin.i64"),
             ("main", r#"
+                extern {
+                    operator > left: builtin.str, right: builtin.str -> builtin.str
+                }
                 type Val = builtin.str
                 
-                type Test = builtin.str(Val) | Val > 0 
+                type Test = builtin.str(Val) where Val > 0 
             "#),
         ];
 
         let (lg, linker) = setup_project(&files, "main");
         let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        
+        println!("{:?}", &errors);
         assert!(errors.is_empty());
         
-        dbg!(&linked_mod);
 
-        let type_decl = &linked_mod.types[1].value; 
-        let refinement = type_decl.refinement.as_ref().unwrap();
+        let type_decl = &linked_mod.types[1].value.definition.value; 
+        let refinement = type_decl.base_type.as_ref().unwrap().refinement.as_ref().unwrap();
 
         match &refinement.value {
             LinkedExpression::Binary { left, .. } => {
@@ -726,8 +393,8 @@ mod tests {
 
         assert!(errors.is_empty(), "Errors: {:?}", errors);
         
-        let type_alias = &linked_mod.types[0].value;
-        match &type_alias.ty.symbol.value {
+        let type_alias = &linked_mod.types[0].value.definition.value.base_type.as_ref().unwrap();
+        match &type_alias.symbol.value {
             ResolvedId::Global(id) => {
                 let (expected, _) = linker.table.resolve("some.deep.inner.Target").unwrap();
                 assert_eq!(id.value, expected);
@@ -753,4 +420,234 @@ mod tests {
             _ => panic!("Sibling resolution failed"),
         }
     }
+    
+    #[test]
+    fn test_extern_function_registration() {
+        let files = [
+            ("main", r#"
+                extern {
+                    isPascalCase name: str -> bool
+                }
+            "#),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        
+        let (id, _) = linker.table.resolve("main.isPascalCase")
+            .expect("Extern function should be registered in symbol table");
+        
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        assert!(errors.is_empty(), "Errors: {:?}", errors);
+
+        let ext = &linked_mod.externs[0].value;
+        
+        assert_eq!(ext.functions[0].value.name, "isPascalCase");
+        assert_eq!(ext.functions[0].value.id, id);
+    }
+
+    #[test]
+    fn test_extern_type_resolution() {
+        let files = [
+            ("lib", "type MyType = builtin.i64"),
+            ("main", r#"
+                extern {
+                    process val: lib.MyType -> builtin.bool
+                }
+            "#),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        assert!(errors.is_empty());
+
+        let ext_fn = &linked_mod.externs[0].value.functions[0].value;
+        
+        if let ResolvedId::Global(symbol_id) = &ext_fn.args[0].value.ty.symbol.value {
+            let (expected_id, _) = linker.table.resolve("lib.MyType").unwrap();
+            assert_eq!(symbol_id.value, expected_id);
+        } else {
+            panic!("Extern argument type should be resolved to Global");
+        }
+    }
+
+    #[test]
+    fn test_call_to_extern_function() {
+        let files = [
+            ("std.utils", r#"
+                extern {
+                    check val: builtin.i64 -> builtin.bool
+                }
+            "#),
+            ("main", r#"
+                import std.utils
+                fact Target {
+                    age: builtin.i64 where check it
+                }
+            "#),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        assert!(errors.is_empty(), "Errors: {:?}", errors);
+
+        let type_decl = &linked_mod.facts[0].value; 
+        let refinement = type_decl.fields[0].value.ty.refinement.as_ref().unwrap();
+
+        match &refinement.value {
+            LinkedExpression::Call { function, .. } => {
+                
+                if let LinkedExpression::Identifier(resolved_id) = &function.value {
+                    if let ResolvedId::Global(symbol_id) = resolved_id {
+                        let (expected_id, _) = linker.table.resolve("std.utils.check").unwrap();
+                        assert_eq!(symbol_id.value, expected_id);
+                    }
+                    else {
+                        panic!("Call should resolve to Global symbol")
+                    }
+                } else {
+                    panic!("Call should resolve to Global symbol");
+                }
+            }
+            _ => panic!("Expected Call expression"),
+        }
+    }
+
+    #[test]
+    fn test_complex_nested_call_refinement() {
+        let files = [
+            ("std.math", r#"
+                extern {
+                    add a: builtin.i64 b: builtin.i64 -> builtin.i64
+                    is_positive val: builtin.i64 -> builtin.bool
+                }
+            "#),
+            ("main", r#"
+                import std.math
+                fact Physics {
+                    velocity: builtin.i64 where std.math.is_positive (std.math.add it 10)
+                }
+            "#),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        
+        assert!(errors.is_empty(), "Linker errors: {:?}", errors);
+
+        let fact = &linked_mod.facts[0].value;
+        let field = &fact.fields[0].value;
+        let refinement = field.ty.refinement.as_ref()
+            .expect("Refinement should exist");
+
+        if let LinkedExpression::Call { function, args } = &refinement.value {
+            
+            assert_is_global_symbol(&linker, function, "std.math.is_positive");
+            assert_eq!(args.len(), 1, "is_positive should have 1 argument");
+
+            if let LinkedExpression::Call { function: inner_func, args: inner_args } = &args[0].value {
+                assert_is_global_symbol(&linker, inner_func, "std.math.add");
+                assert_eq!(inner_args.len(), 2, "add should have 2 arguments");
+
+                match &inner_args[0].value {
+                    LinkedExpression::Identifier(ResolvedId::Local(id)) => {
+                        assert_eq!(id.value, "it");
+                    }
+                    _ => panic!("First arg of 'add' should be local 'it', got {:?}", inner_args[0].value),
+                }
+
+                match &inner_args[1].value {
+                    LinkedExpression::Number(val) => {
+                        assert_eq!(val, "10");
+                    }
+                    _ => panic!("Second arg of 'add' should be number '10'"),
+                }
+            } else {
+                panic!("Expected nested Call to std.math.add, got {:?}", args[0].value);
+            }
+        } else {
+            panic!("Expected outer Call, got {:?}", refinement.value);
+        }
+    }
+
+    fn assert_is_global_symbol(linker: &Linker, expr: &Spanned<LinkedExpression>, expected_fqmn: &str) {
+        if let LinkedExpression::Identifier(ResolvedId::Global(symbol_id)) = &expr.value {
+            let (expected_id, _) = linker.table.resolve(expected_fqmn)
+                .unwrap_or_else(|| panic!("Could not resolve {} in global table", expected_fqmn));
+            assert_eq!(symbol_id.value, expected_id, "Symbol mismatch for {}", expected_fqmn);
+        } else {
+            panic!("Expected Global identifier for {}, got {:?}", expected_fqmn, expr.value);
+        }
+    }
+
+    #[test]
+    fn test_extern_operator_resolution() {
+        let files = [
+            ("main", r#"
+                extern {
+                    operator / left: str, right: str -> str
+                }
+                
+                type Path = str where "root" / it
+            "#),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        
+        assert!(errors.is_empty(), "Linker errors: {:?}", errors);
+        
+        let (expected_id, _) = linker.table.resolve("main./")
+            .expect("Operator '/' should be registered in main module");
+        
+        let type_decl = &linked_mod.types[0].value.definition.value; 
+        let refinement = type_decl.base_type.as_ref().unwrap().refinement.as_ref().unwrap();
+
+        // match &refinement.value {
+        //     LinkedExpression::Call { args, function } => {
+                
+        //         if let ResolvedId::Global(id) = &operator.value {
+        //             assert_eq!(id.value, expected_id, "Operator ID mismatch");
+        //         } else {
+        //             panic!("Operator should be resolved to Global, got {:?}", operator.value);
+        //         }
+
+        //         assert!(matches!(left.value, LinkedExpression::StringLit(_)));
+        //         assert!(matches!(right.value, LinkedExpression::Identifier(ResolvedId::Local(_))));
+        //     }
+        //     _ => panic!("Expected LinkedExpression::Binary, got {:?}", refinement.value),
+        // }
+    }
+
+
+    #[test]
+    fn test_extern_collision_error() {
+        let files = [
+            ("main", r#"
+                extern {
+                    fetch id: i64 -> str
+                }
+                extern {
+                    fetch name: str -> str
+                }
+            "#),
+        ];
+
+        
+        let mut mock_files = std::collections::BTreeMap::new();
+        for (name, content) in files {
+            mock_files.insert(name.to_string(), content.to_string());
+        }
+
+        let loader = InMemoryLoader { files: mock_files };
+        let builder = GraphBuilder::new(&loader);
+        let roots = vec![PackageRoot { name: "main".into(), path: "/virtual/main".into() }];
+        let (lowered, _) = builder.build(&roots).unwrap().lower();
+
+        let mut linker = Linker::new(vec![]);
+        let errors = linker.collect_definitions(&lowered);
+        
+        assert!(!errors.is_empty(), "Should detect symbol collision in extern");
+        assert!(errors.0.iter().any(|e| matches!(e, LinkerError::SymbolCollision { name, .. } if name == "main.fetch")));
+    }
+
 }

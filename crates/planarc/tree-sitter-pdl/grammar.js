@@ -18,7 +18,10 @@ export default grammar({
   ],
 
   conflicts: $ => [
-    [$._refinement_expression, $._expression]
+    [$._type_primary, $.type_application],
+    [$.type_application],
+    [$.refinement],
+    [$._expression, $.operator_section]
   ],
 
   rules: {
@@ -39,6 +42,8 @@ export default grammar({
     query_definition: $ => seq(
       'query',
       field('name', $.identifier),
+      ':',
+      field('grammar', $.fqmn),
       '=',
       field('value', $.query_literal)
     ),
@@ -51,11 +56,6 @@ export default grammar({
     attribute: $ => seq(
       '#',
       field('name', $.identifier),
-      optional(seq(
-        '(',
-        commaSep($._expression),
-        ')'
-      )),
       $._newline
     ),
 
@@ -78,11 +78,28 @@ export default grammar({
     ),
 
     type_declaration: $ => seq(
+      repeat($.attribute),
       'type',
       field('name', $.identifier),
       '=',
+      field('body', $.type_definition),
+      $._newline
+    ),
+
+    type_definition: $ => choice(
       field('type', $.type_annotation),
-      field('refinement', optional($.refinement))
+      seq(
+        '{',
+        repeat(choice($.type_field_definition, $._newline)),
+        '}'
+      )
+    ),
+
+
+    type_field_definition: $ => seq(
+      field('name', $.identifier),
+      ':',
+      field('type', $.type_definition),
     ),
 
     fact_field_definition: $ => seq(
@@ -90,56 +107,64 @@ export default grammar({
       field('name', $.identifier),
       ':',
       field('type', $.type_annotation),
-      field('refinement', optional($.refinement))
+      $._newline
     ),
 
-    
-    type_annotation: $ => seq(
-      field('name', $.type_identifier),
-      
-      field('arguments', optional($.type_arguments)),
-      
-      
-      optional(seq(
-        '(',
-        field('variable', $.identifier),
-        ')'
-      ))
+    type_annotation: $ => choice(
+      prec(2, seq($._type_primary, $.refinement)),
+      prec(1, $._type_primary)
     ),
 
+    _type_primary: $ => choice(
+      $.type_identifier,                 
+      $.type_application,                
+      seq('(', $.type_annotation, ')')  
+    ),
     
+    type_application: $ => seq(
+      field('constructor', $.type_identifier),
+      repeat1(field('argument', $._type_atom))
+    ),
+
+    _type_atom: $ => choice(
+      $.type_identifier,
+      seq('(', $.type_annotation, ')')
+    ),
+
+    refinement: $ => seq('where', repeat($._expression)),
+
     type_arguments: $ => seq(
       '<',
-      commaSep1($.type_argument),
-      '>'
+      commaSep1($.type_annotation),
+      '>',
     ),
 
-    
-    type_argument: $ => seq(
-      field('type', $.type_annotation),
-      field('refinement', optional($.refinement))
+    _expression: $ => choice(
+      $.it,
+      $.fqmn,
+      $.number,
+      $.string,
+      $.operator_identifier,
+      $.in_expression,
+      $.operator_section,
+      $.parenthesized_expression
     ),
 
-    
-    refinement: $ => seq(
-      '|',
-      $._refinement_expression
+    parenthesized_expression: $ => seq(
+      '(',
+      repeat1($._expression),
+      ')'
     ),
 
-    
-    _refinement_expression: $ => choice(
-      $.binary_expression,   
-      $.call_expression,     
-      $.operator_section,    
-      $.in_expression,       
-      $.identifier           
-    ),
-
+    it: _ => field('it', 'it'),
     
     operator_section: $ => seq(
-      field('operator', choice('>', '<', '>=', '<=', '==', '!=')),
-      field('right', $._expression)
+      '(',
+      field('operator', $.operator_identifier),
+      $._expression,
+      ')'
     ),
+
     list_items: $ => commaSep1($._expression),
     
     in_expression: $ => seq(
@@ -152,6 +177,8 @@ export default grammar({
       ']'
     ),
 
+    operator_identifier: $ => /[!@#$%^&*\-+=|<>/?~]+/,
+
     range: $ => seq(
       field('start', $._expression),
       '..',
@@ -160,26 +187,14 @@ export default grammar({
 
     type_identifier: $ => $.fqmn,
 
-    _expression: $ => choice(
-      $.identifier,
-      $.number,
-      $.string,
-      $.binary_expression,
-      $.call_expression
-    ),
+
     
     binary_expression: $ => prec.left(1, seq(
         field('left', $._expression),
         field('operator', choice('+', '-', '*', '/', '==', '!=', '>', '<', '>=', '<=')),
         field('right', $._expression)
     )),
-
-    call_expression: $ => seq(
-        field('function', $.dotted_identifier),
-        '(', commaSep($._expression), ')'
-    ),
     
-    dotted_identifier: $ => sep1($.identifier, '.'),
 
     import_definition: $ => seq(
       'import',
@@ -187,9 +202,9 @@ export default grammar({
     ),
 
     extern_definition: $ => seq(
+      field('attributes', repeat($.attribute)),
       'extern',
-      field('module', $.fqmn),
-      $.extern_block
+      field('block', $.extern_block)
     ),  
 
     extern_def_fn: $ => seq(
@@ -201,21 +216,18 @@ export default grammar({
         )
       ),
 
-      '::',
       repeat(seq($.extern_def_arg, optional(','))),
       '->',
       $.extern_return,
       $._newline
     ),
-    
-    operator_identifier: $ => /[!@#$%^&*\-+=|<>/?~]+/,
 
     extern_return: $ => seq(
-      $.identifier, optional('?')
+      $.type_annotation, optional('?')
     ),
 
     extern_def_arg: $ => seq(
-      field('arg', $.identifier), ':', field('type', $.identifier)
+      field('arg', $.identifier), ':', field('type', $.type_annotation)
     ),
 
     extern_block: $ => seq(
@@ -238,11 +250,10 @@ export default grammar({
     ),
 
     _statement: $ => choice(
-      $.match_stmt
+      $.match_stmt,
+      $.query_definition
     ),
 
-    
-    
     match_stmt: $ => seq(
       'match',
       field('query', choice($.raw_string, $.identifier)),
@@ -296,10 +307,10 @@ export default grammar({
     ),
 
     fqmn: $ => seq(
-      /[a-zA-Z_][a-zA-Z0-9_]*/,      
+      $.identifier,      
       repeat(seq(
         '.',                         
-        /[a-zA-Z_][a-zA-Z0-9_]*/     
+        $.identifier     
       ))
     ),
 

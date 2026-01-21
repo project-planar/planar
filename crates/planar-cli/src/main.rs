@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use console::{style, Emoji};
+use tracing_subscriber::EnvFilter;
 
-use crate::settings::get_registry;
 
-mod setup;
 mod settings;
 mod init;
 mod build;
@@ -27,11 +26,6 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     
-    /// Install or update grammars
-    Setup {
-        #[arg(short, long)]
-        force: bool,
-    },
     /// Initialize a new Planar project
     Init {
         /// Project name (optional, defaults to current directory)
@@ -78,13 +72,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Init { name } => {
             init::run(name)?; 
         }
-        Commands::Setup { force } => {
-            println!("{} {}Setup Planar environment...", style("planar").bold().cyan(), LOOKING_GLASS);
-            setup::run(force, get_registry()?).await?;
-        }
         Commands::Build { path, verbose } => {
             init_tracing(verbose); 
-            build::run(path, verbose > 0).map_err(|e| anyhow!(e))?;
+            build::run(path, verbose > 0).await.map_err(|e| anyhow!(e))?;
         }
         Commands::Global { action } => match action {
             GlobalAction::Set { key, value } => global::run_set(key, value)?,
@@ -102,13 +92,15 @@ async fn main() -> anyhow::Result<()> {
 fn init_tracing(verbosity: u8) {
     if verbosity == 0 { return; }
 
-    let level = match verbosity {
-        1 => tracing::Level::DEBUG,
-        _ => tracing::Level::TRACE,
+    let level_str = match verbosity {
+        1 => "debug",
+        _ => "trace",
     };
 
+    let filter_str = format!("off,planar={},planarc={},planar_pkg={}", level_str, level_str, level_str);
+
     tracing_subscriber::fmt()
-        .with_max_level(level)
+        .with_env_filter(EnvFilter::new(filter_str))
         .with_file(verbosity > 1) 
         .with_line_number(verbosity > 1)
         .with_target(true) 

@@ -1,0 +1,54 @@
+{
+  "name": "planar",
+  "displayName": "Planar",
+  "description": "This is the README for your extension \"planar\". After writing up a brief description, we recommend including the following sections.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "pdl",
+        "aliases": [
+          "Planardl",
+          "pdl"
+        ],
+        "extensions": [
+          ".pdl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pdl",
+        "scopeName": "source.pdl",
+        "path": "./syntaxes/planardl.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+      "build-lsp": "cargo build --manifest-path ../../Cargo.toml --bin planar-lsp --target-dir ./build-temp",
+      "copy-lsp": "node -e \"fs.mkdirSync('./bin', {recursive: true}); const platform = process.platform === 'win32' ? '.exe' : ''; const src = './build-temp/debug/planar-lsp' + platform; const dest = './bin/planar-lsp' + platform; fs.copyFileSync(src, dest); if (process.platform !== 'win32') fs.chmodSync(dest, 0o755)\"",
+      "compile-ts": "tsc -p ./",
+      "build-all": "npm run build-lsp && npm run copy-lsp && npm run compile-ts",
+      "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.7",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC" 
+}

@@ -66,16 +66,20 @@ pub struct Span {
     pub end: usize,
     pub line: u32,
     pub col: u32,
+    pub line_end: u32,
+    pub col_end: u32,
 }
 
 impl Span {
     
-    pub fn new(start: usize, end: usize, line: u32, col: u32) -> Self {
+    pub fn new(start: usize, end: usize, line: u32, col: u32, line_end: u32, col_end: u32) -> Self {
         Self { 
             start, 
             end, 
             line, 
-            col 
+            col,
+            col_end,
+            line_end
         }
     }
 
@@ -83,8 +87,7 @@ impl Span {
         Self {
             start: range.start,
             end: range.end,
-            line: 0,
-            col: 0,
+            ..Default::default()
         }
     }
 }

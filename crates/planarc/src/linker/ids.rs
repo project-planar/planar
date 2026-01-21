@@ -21,4 +21,5 @@ pub enum SymbolKind {
     Type,
     Field,
     ExternFunction,
+    Query,
 }

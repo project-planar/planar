@@ -8,7 +8,8 @@ members = [
 planar-config-macro = { path = "crates/planar-config-macro" }
 planarc = { path = "crates/planarc" }
 planar-pkg = { path = "crates/planar-pkg" }
-
+tree-sitter-planardl = { path = "crates/planarc/tree-sitter-pdl/" }
+tokio = { version = "1.49.0", features = ["full"] }
 tree-sitter = { version = "0.25.10" }
 insta = { version = "1.46.0", features = ["json"] }
 miette = { version = "7.6.0", features = ["fancy", "serde"] }
@@ -24,3 +25,4 @@ test-log = { version = "0.2.19", features = ["trace"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 derive_more = { version = "2.1.1", features = ["full"]}
 tempfile = "3.24.0"
+futures-util = "0.3.31"

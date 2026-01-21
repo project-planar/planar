@@ -23,6 +23,8 @@ impl<'a> Ctx<'a> {
             range.end_byte,
             (range.start_point.row + 1) as u32,
             (range.start_point.column + 1) as u32,
+            range.end_point.row as u32,
+            range.end_point.column as u32,
         );
 
         Spanned {
@@ -34,6 +36,9 @@ impl<'a> Ctx<'a> {
         }
     }
 
+    pub fn location(&self, node: &impl Node<'a>) -> Location {
+        self.spanned(node, ()).loc
+    }
 
     pub fn text(&self, node: &impl Node<'a>) -> String {
         node.utf8_text(self.source.content.as_bytes())

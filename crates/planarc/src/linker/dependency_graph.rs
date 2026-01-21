@@ -106,12 +106,6 @@ impl DependencyGraph {
     }
 }
 
-pub struct ProjectGraph {
-    pub graph: DiGraph<String, ()>,
-    pub indices: BTreeMap<String, NodeIndex>,
-    pub modules: BTreeMap<String, CompilationUnit>,
-}
-
 pub struct GraphBuilder<'a, L: ModuleLoader> {
     loader: &'a L
 }
@@ -233,6 +227,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                         span: location.into(), 
                         import: import_name,
                         module: src_fqmn,
+                        loc: location
                     }.into());
                 }
             }
@@ -287,6 +282,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                     span: loc.into(),
                     module: module_name.clone(),
                     target: target_name,
+                    loc,
                 });
             }
             Ok(steps)
@@ -352,6 +348,8 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                     range.end_byte,
                     (range.start_point.row + 1) as u32,
                     (range.start_point.column + 1) as u32,
+                    range.end_point.row as u32,
+                    range.end_point.column as u32,
                 );
                 
                 let loc = Location::new(file_id, span);

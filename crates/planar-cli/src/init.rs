@@ -60,13 +60,23 @@ pub fn run(path: Option<String>) -> anyhow::Result<()> {
     println!("{} Creating new Planar project: {}", SPARKLE, style(&name).bold().cyan());
 
     let kdl_content = format!(
-        r#"package {{
+         r#"// Project metadata
+package {{
     name "{}"
     version "0.1.0"
 }}
 
+// Code dependencies (libraries, other projects)
 dependencies {{
-    // std git="https://github.com/planar-lang/std"
+    // std path="../std"
+    // http git="https://github.com/user/http-lib.git" tag="v1.0.0"
+}}
+
+// Precompiled tree-sitter grammars for language parsing
+grammars {{
+    // json                     // Pull from official registry
+    // yaml                     // Pull from official registry
+    // nginx path="./libs/nginx.so"  // Use local binary
 }}
 "#,
         name

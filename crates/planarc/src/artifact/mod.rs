@@ -28,18 +28,18 @@ mod tests {
                 Location { file_id, span: Span { start: 0, end: 5, ..Default::default() } }
             ),
             args: vec![],
-            generic_var: Some("T".to_string()),
+            refinement: None
         };
 
         let field = Spanned::new(LinkedField {
             attributes: vec![],
             name: "id".to_string(),
             ty: type_ref,
-            refinement: None,
         }, Location { file_id, span: Span { start: 10, end: 20, ..Default::default() } });
 
         modules.insert("core".to_string(), LinkedModule {
             file_id,
+            externs: vec![],
             facts: vec![Spanned::new(LinkedFact {
                 id: SymbolId(1),
                 attributes: vec![],
@@ -47,6 +47,7 @@ mod tests {
                 fields: vec![field],
             }, Location { file_id, span: Span { start: 0, end: 100, ..Default::default() } })],
             types: vec![],
+            queries: vec![]
         });
 
         let mut symbols = BTreeMap::new();
@@ -65,7 +66,8 @@ mod tests {
             symbol_table: SymbolTable { symbols, next_id: 2 },
             modules,
             wasm_modules,
-            files: BTreeMap::new()
+            files: BTreeMap::new(),
+            grammars: BTreeMap::new()
         }
     }
 
@@ -168,7 +170,8 @@ mod tests {
             symbol_table: SymbolTable::default(),
             modules: BTreeMap::new(),
             wasm_modules: BTreeMap::new(),
-            files: BTreeMap::new()
+            files: BTreeMap::new(),
+            grammars: BTreeMap::new()
         };
         let mut buf = Vec::new();
         write_bundle(&prog, &mut buf, Some(1337)).unwrap();

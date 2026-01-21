@@ -1,4 +1,6 @@
-use crate::{module_loader::Source, spanned::FileId};
+use miette::{NamedSource, SourceSpan};
+
+use crate::{module_loader::Source, spanned::{FileId, Location}};
 use std::collections::BTreeMap;
 
 #[derive(Default, Debug, Clone)]
@@ -23,4 +25,13 @@ impl SourceRegistry {
     pub fn get(&self, id: FileId) -> Option<&Source> {
         self.files.get(&id)
     }
+
+    
+    pub fn get_source_and_span(&self, loc: Location) -> (NamedSource<String>, SourceSpan) {
+        let source = self.get(loc.file_id).expect("Invalid file_id");
+        let named_source = NamedSource::new(source.origin.clone(), source.content.clone());
+        let span = SourceSpan::new(loc.span.start.into(), loc.span.end - loc.span.start);
+        (named_source, span)
+    }
+
 }

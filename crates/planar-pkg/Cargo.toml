@@ -14,10 +14,17 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 planar-config-macro = { workspace = true }
 planarc = { workspace = true }
+futures-util = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
 tree-sitter-kdl = { git = "https://github.com/Tam1SH/tree-sitter-kdl", branch = "downgrade"}
 strum = { version = "0.27.2", features = ["derive"] }
-tracing = "0.1.44"
+reqwest = { version = "0.13.1", features = ["json", "stream"] }
 directories = "6.0.0"
+sha2 = "0.10"
+hex = "0.4"
+
 
 [dev-dependencies]
 tempfile = { workspace = true }
+wiremock = "0.6.5"

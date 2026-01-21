@@ -1,0 +1,15 @@
+[package]
+name = "planar-lsp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+planarc = { workspace = true }
+planar-pkg = { workspace = true }
+tokio = { version = "1", features = ["full"] }
+tower-lsp = "0.20"
+tree-sitter = { workspace = true }
+tree-sitter-planardl = { workspace = true }
+dashmap = "6.1.0"
+anyhow = { workspace = true }
+

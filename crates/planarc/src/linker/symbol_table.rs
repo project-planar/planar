@@ -60,4 +60,10 @@ impl SymbolTable {
     pub fn debug_keys(&self) -> Vec<&String> {
         self.symbols.keys().collect()
     }
+
+    pub fn get_fqmn(&self, id: SymbolId) -> Option<&String> {
+        self.symbols.iter()
+            .find(|(_, meta)| meta.id == id)
+            .map(|(name, _)| name)
+    }
 }

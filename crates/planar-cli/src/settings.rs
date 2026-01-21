@@ -4,8 +4,6 @@ use std::fs;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-const DEFAULT_REGISTRY: &str = "https://github.com/Tam1SH/planar-grammars-registry/releases/latest/download";
-
 #[derive(Serialize, Deserialize, Default)]
 struct Settings {
     values: HashMap<String, String>,
@@ -40,12 +38,4 @@ pub fn set(key: &str, value: &str) -> anyhow::Result<()> {
 pub fn get(key: &str) -> anyhow::Result<String> {
     let s = load();
     s.values.get(key).cloned().context("Key not found")
-}
-
-pub fn get_registry() -> anyhow::Result<String> {
-    // Env -> Config File -> Fallback
-    if let Ok(env) = std::env::var("PLANAR_REGISTRY") {
-        return Ok(env);
-    }
-    Ok(get("registry").unwrap_or_else(|_| DEFAULT_REGISTRY.to_string()))
 }

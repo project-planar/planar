@@ -20,6 +20,8 @@ expression: "(&original, archived)"
                             end: 100,
                             line: 0,
                             col: 0,
+                            line_end: 0,
+                            col_end: 0,
                         },
                     },
                 },
@@ -46,19 +48,18 @@ expression: "(&original, archived)"
                                     symbol: Global(
                                         SymbolId(
                                             100,
-                                        ) @ Span { start: 0, end: 5, line: 0, col: 0 },
-                                    ) @ Span { start: 0, end: 5, line: 0, col: 0 },
+                                        ) @ Span { start: 0, end: 5, line: 0, col: 0, line_end: 0, col_end: 0 },
+                                    ) @ Span { start: 0, end: 5, line: 0, col: 0, line_end: 0, col_end: 0 },
                                     args: [],
-                                    generic_var: Some(
-                                        "T",
-                                    ),
+                                    refinement: None,
                                 },
-                                refinement: None,
-                            } @ Span { start: 10, end: 20, line: 0, col: 0 },
+                            } @ Span { start: 10, end: 20, line: 0, col: 0, line_end: 0, col_end: 0 },
                         ],
-                    } @ Span { start: 0, end: 100, line: 0, col: 0 },
+                    } @ Span { start: 0, end: 100, line: 0, col: 0, line_end: 0, col_end: 0 },
                 ],
                 types: [],
+                externs: [],
+                queries: [],
             },
         },
         wasm_modules: {
@@ -70,6 +71,7 @@ expression: "(&original, archived)"
             ],
         },
         files: {},
+        grammars: {},
     },
     ArchivedBundle {
         symbol_table: ArchivedSymbolTable {
@@ -88,6 +90,8 @@ expression: "(&original, archived)"
                             end: 100,
                             line: 0,
                             col: 0,
+                            line_end: 0,
+                            col_end: 0,
                         },
                     },
                 },
@@ -114,19 +118,18 @@ expression: "(&original, archived)"
                                     symbol: Global(
                                         ArchivedSymbolId(
                                             100,
-                                        ) @ ArchivedSpan { start: 0, end: 5, line: 0, col: 0 },
-                                    ) @ ArchivedSpan { start: 0, end: 5, line: 0, col: 0 },
+                                        ) @ ArchivedSpan { start: 0, end: 5, line: 0, col: 0, line_end: 0, col_end: 0 },
+                                    ) @ ArchivedSpan { start: 0, end: 5, line: 0, col: 0, line_end: 0, col_end: 0 },
                                     args: [],
-                                    generic_var: Some(
-                                        "T",
-                                    ),
+                                    refinement: None,
                                 },
-                                refinement: None,
-                            } @ ArchivedSpan { start: 10, end: 20, line: 0, col: 0 },
+                            } @ ArchivedSpan { start: 10, end: 20, line: 0, col: 0, line_end: 0, col_end: 0 },
                         ],
-                    } @ ArchivedSpan { start: 0, end: 100, line: 0, col: 0 },
+                    } @ ArchivedSpan { start: 0, end: 100, line: 0, col: 0, line_end: 0, col_end: 0 },
                 ],
                 types: [],
+                externs: [],
+                queries: [],
             },
         },
         wasm_modules: {
@@ -138,5 +141,6 @@ expression: "(&original, archived)"
             ],
         },
         files: {},
+        grammars: {},
     },
 )

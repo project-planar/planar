@@ -3,15 +3,6 @@
 This node has these fields:
 
 - `name`: `identifier` ([`Identifier`])
-
-And additional named children of type `{binary_expression | call_expression | identifier | number | string}*`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -30,42 +21,6 @@ This child has type `identifier` ([`Identifier`])*/
             .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-    /**Get the node's non-field not-extra named children.
-
-These children have type `{binary_expression | call_expression | identifier | number | string}*`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-*/
-    #[inline]
-    pub fn others<'a>(
-        &self,
-        c: &'a mut ::type_sitter::TreeCursor<'tree>,
-    ) -> impl ::std::iter::Iterator<
-        Item = ::type_sitter::NodeResult<
-            'tree,
-            anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
-        >,
-    > + 'a {
-        {
-            let me = *::type_sitter::Node::raw(self);
-            ::type_sitter::Node::raw(self)
-                .named_children(&mut c.0)
-                .enumerate()
-                .filter(move |(i, n)| {
-                    !n.is_extra() && me.field_name_for_named_child(*i as _).is_none()
-                })
-                .map(|(_, n)| n)
-        }
-            .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
             )
     }
 }
@@ -101,146 +56,13 @@ impl<'tree> ::type_sitter::Node<'tree> for Attribute<'tree> {
         self.0
     }
 }
-/**Typed node `binary_expression`
-
-This node has these fields:
-
-- `left`: `{binary_expression | call_expression | identifier | number | string}` ([`BinaryExpression`] | [`CallExpression`] | [`Identifier`] | [`Number`] | [`String`])
-- `operator`: `{!= | * | + | - | / | < | <= | == | > | >=}` ([`symbols::NotEq`] | [`symbols::Mul`] | [`symbols::Add`] | [`symbols::Sub`] | [`symbols::Div`] | [`symbols::Lt`] | [`symbols::LtEq`] | [`symbols::EqEq`] | [`symbols::Gt`] | [`symbols::GtEq`])
-- `right`: `{binary_expression | call_expression | identifier | number | string}` ([`BinaryExpression`] | [`CallExpression`] | [`Identifier`] | [`Number`] | [`String`])
-*/
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-#[allow(non_camel_case_types)]
-pub struct BinaryExpression<'tree>(::type_sitter::raw::Node<'tree>);
-#[automatically_derived]
-#[allow(unused)]
-impl<'tree> BinaryExpression<'tree> {
-    /**Get the field `left`.
-
-This child has type `{binary_expression | call_expression | identifier | number | string}`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-*/
-    #[inline]
-    pub fn left(
-        &self,
-    ) -> ::type_sitter::NodeResult<
-        'tree,
-        anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
-    > {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("left")
-            .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
-            )
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-    /**Get the field `operator`.
-
-This child has type `{!= | * | + | - | / | < | <= | == | > | >=}`:
-
-- [`symbols::NotEq`]
-- [`symbols::Mul`]
-- [`symbols::Add`]
-- [`symbols::Sub`]
-- [`symbols::Div`]
-- [`symbols::Lt`]
-- [`symbols::LtEq`]
-- [`symbols::EqEq`]
-- [`symbols::Gt`]
-- [`symbols::GtEq`]
-*/
-    #[inline]
-    pub fn operator(
-        &self,
-    ) -> ::type_sitter::NodeResult<
-        'tree,
-        anon_unions::NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<'tree>,
-    > {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("operator")
-            .map(
-                <anon_unions::NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
-            )
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-    /**Get the field `right`.
-
-This child has type `{binary_expression | call_expression | identifier | number | string}`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-*/
-    #[inline]
-    pub fn right(
-        &self,
-    ) -> ::type_sitter::NodeResult<
-        'tree,
-        anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
-    > {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("right")
-            .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
-            )
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::Node<'tree> for BinaryExpression<'tree> {
-    type WithLifetime<'a> = BinaryExpression<'a>;
-    const KIND: &'static str = "binary_expression";
-    #[inline]
-    fn try_from_raw(
-        node: ::type_sitter::raw::Node<'tree>,
-    ) -> ::type_sitter::NodeResult<'tree, Self> {
-        if node.kind() == "binary_expression" {
-            Ok(Self(node))
-        } else {
-            Err(::type_sitter::IncorrectKind::new::<Self>(node))
-        }
-    }
-    #[inline]
-    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-        debug_assert_eq!(node.kind(), "binary_expression");
-        Self(node)
-    }
-    #[inline]
-    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-        &self.0
-    }
-    #[inline]
-    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-        &mut self.0
-    }
-    #[inline]
-    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-        self.0
-    }
-}
 /**Typed node `block`
 
-This node has named children of type `match_stmt*` ([`MatchStmt`])
+This node has named children of type `{match_stmt | query_definition}*`:
+
+- [`MatchStmt`]
+- [`QueryDefinition`]
+
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -248,26 +70,10 @@ This node has named children of type `match_stmt*` ([`MatchStmt`])
 pub struct Block<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
-impl<'tree> Block<'tree> {
-    /**Get the node's not-extra named children.
-
-These children have type `match_stmt*` ([`MatchStmt`])*/
-    #[inline]
-    pub fn match_stmts<'a>(
-        &self,
-        c: &'a mut ::type_sitter::TreeCursor<'tree>,
-    ) -> impl ::std::iter::Iterator<
-        Item = ::type_sitter::NodeResult<'tree, MatchStmt<'tree>>,
-    > + 'a {
-        ::type_sitter::Node::raw(self)
-            .named_children(&mut c.0)
-            .filter(|n| !n.is_extra())
-            .map(<MatchStmt<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
-}
+impl<'tree> Block<'tree> {}
 #[automatically_derived]
 impl<'tree> ::type_sitter::HasChildren<'tree> for Block<'tree> {
-    type Child = MatchStmt<'tree>;
+    type Child = anon_unions::MatchStmt_QueryDefinition<'tree>;
 }
 #[automatically_derived]
 impl<'tree> ::type_sitter::Node<'tree> for Block<'tree> {
@@ -286,109 +92,6 @@ impl<'tree> ::type_sitter::Node<'tree> for Block<'tree> {
     #[inline]
     unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
         debug_assert_eq!(node.kind(), "block");
-        Self(node)
-    }
-    #[inline]
-    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-        &self.0
-    }
-    #[inline]
-    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-        &mut self.0
-    }
-    #[inline]
-    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-        self.0
-    }
-}
-/**Typed node `call_expression`
-
-This node has these fields:
-
-- `function`: `dotted_identifier` ([`DottedIdentifier`])
-
-And additional named children of type `{binary_expression | call_expression | identifier | number | string}*`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-
-*/
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-#[allow(non_camel_case_types)]
-pub struct CallExpression<'tree>(::type_sitter::raw::Node<'tree>);
-#[automatically_derived]
-#[allow(unused)]
-impl<'tree> CallExpression<'tree> {
-    /**Get the field `function`.
-
-This child has type `dotted_identifier` ([`DottedIdentifier`])*/
-    #[inline]
-    pub fn function(&self) -> ::type_sitter::NodeResult<'tree, DottedIdentifier<'tree>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("function")
-            .map(<DottedIdentifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-    /**Get the node's non-field not-extra named children.
-
-These children have type `{binary_expression | call_expression | identifier | number | string}*`:
-
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]
-*/
-    #[inline]
-    pub fn others<'a>(
-        &self,
-        c: &'a mut ::type_sitter::TreeCursor<'tree>,
-    ) -> impl ::std::iter::Iterator<
-        Item = ::type_sitter::NodeResult<
-            'tree,
-            anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
-        >,
-    > + 'a {
-        {
-            let me = *::type_sitter::Node::raw(self);
-            ::type_sitter::Node::raw(self)
-                .named_children(&mut c.0)
-                .enumerate()
-                .filter(move |(i, n)| {
-                    !n.is_extra() && me.field_name_for_named_child(*i as _).is_none()
-                })
-                .map(|(_, n)| n)
-        }
-            .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
-            )
-    }
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::Node<'tree> for CallExpression<'tree> {
-    type WithLifetime<'a> = CallExpression<'a>;
-    const KIND: &'static str = "call_expression";
-    #[inline]
-    fn try_from_raw(
-        node: ::type_sitter::raw::Node<'tree>,
-    ) -> ::type_sitter::NodeResult<'tree, Self> {
-        if node.kind() == "call_expression" {
-            Ok(Self(node))
-        } else {
-            Err(::type_sitter::IncorrectKind::new::<Self>(node))
-        }
-    }
-    #[inline]
-    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-        debug_assert_eq!(node.kind(), "call_expression");
         Self(node)
     }
     #[inline]
@@ -634,72 +337,6 @@ impl<'tree> ::type_sitter::Node<'tree> for Comment<'tree> {
         self.0
     }
 }
-/**Typed node `dotted_identifier`
-
-This node has named children of type `identifier+` ([`Identifier`])
-*/
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-#[allow(non_camel_case_types)]
-pub struct DottedIdentifier<'tree>(::type_sitter::raw::Node<'tree>);
-#[automatically_derived]
-#[allow(unused)]
-impl<'tree> DottedIdentifier<'tree> {
-    /**Get the node's not-extra named children.
-
-These children have type `identifier+` ([`Identifier`])*/
-    /**
-
-This is guaranteed to return at least one child.*/
-    #[inline]
-    pub fn identifiers<'a>(
-        &self,
-        c: &'a mut ::type_sitter::TreeCursor<'tree>,
-    ) -> impl ::std::iter::Iterator<
-        Item = ::type_sitter::NodeResult<'tree, Identifier<'tree>>,
-    > + 'a {
-        ::type_sitter::Node::raw(self)
-            .named_children(&mut c.0)
-            .filter(|n| !n.is_extra())
-            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::HasChildren<'tree> for DottedIdentifier<'tree> {
-    type Child = Identifier<'tree>;
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::Node<'tree> for DottedIdentifier<'tree> {
-    type WithLifetime<'a> = DottedIdentifier<'a>;
-    const KIND: &'static str = "dotted_identifier";
-    #[inline]
-    fn try_from_raw(
-        node: ::type_sitter::raw::Node<'tree>,
-    ) -> ::type_sitter::NodeResult<'tree, Self> {
-        if node.kind() == "dotted_identifier" {
-            Ok(Self(node))
-        } else {
-            Err(::type_sitter::IncorrectKind::new::<Self>(node))
-        }
-    }
-    #[inline]
-    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-        debug_assert_eq!(node.kind(), "dotted_identifier");
-        Self(node)
-    }
-    #[inline]
-    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-        &self.0
-    }
-    #[inline]
-    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-        &mut self.0
-    }
-    #[inline]
-    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-        self.0
-    }
-}
 /**Typed node `extern_block`
 
 This node has named children of type `extern_def_fn*` ([`ExternDefFn`])
@@ -768,7 +405,7 @@ impl<'tree> ::type_sitter::Node<'tree> for ExternBlock<'tree> {
 This node has these fields:
 
 - `arg`: `identifier` ([`Identifier`])
-- `type`: `identifier` ([`Identifier`])
+- `type`: `type_annotation` ([`TypeAnnotation`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -791,12 +428,12 @@ This child has type `identifier` ([`Identifier`])*/
     }
     /**Get the field `type`.
 
-This child has type `identifier` ([`Identifier`])*/
+This child has type `type_annotation` ([`TypeAnnotation`])*/
     #[inline]
-    pub fn r#type(&self) -> ::type_sitter::NodeResult<'tree, Identifier<'tree>> {
+    pub fn r#type(&self) -> ::type_sitter::NodeResult<'tree, TypeAnnotation<'tree>> {
         ::type_sitter::Node::raw(self)
             .child_by_field_name("type")
-            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .map(<TypeAnnotation<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
             )
@@ -893,9 +530,8 @@ impl<'tree> ::type_sitter::Node<'tree> for ExternDefFn<'tree> {
 
 This node has these fields:
 
-- `module`: `fqmn` ([`Fqmn`])
-
-And an additional named child of type `extern_block` ([`ExternBlock`])
+- `attributes`: `attribute*` ([`Attribute`])
+- `block`: `extern_block` ([`ExternBlock`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -904,32 +540,27 @@ pub struct ExternDefinition<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
 impl<'tree> ExternDefinition<'tree> {
-    /**Get the field `module`.
+    /**Get the children of field `attributes`.
 
-This child has type `fqmn` ([`Fqmn`])*/
+These children have type `attribute*` ([`Attribute`])*/
     #[inline]
-    pub fn module(&self) -> ::type_sitter::NodeResult<'tree, Fqmn<'tree>> {
+    pub fn attributess<'a>(
+        &self,
+        c: &'a mut ::type_sitter::TreeCursor<'tree>,
+    ) -> impl ::std::iter::Iterator<
+        Item = ::type_sitter::NodeResult<'tree, Attribute<'tree>>,
+    > + 'a {
         ::type_sitter::Node::raw(self)
-            .child_by_field_name("module")
-            .map(<Fqmn<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
+            .children_by_field_name("attributes", &mut c.0)
+            .map(<Attribute<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
     }
-    /**Get the node's only non-field not-extra named child.
+    /**Get the field `block`.
 
 This child has type `extern_block` ([`ExternBlock`])*/
     #[inline]
-    pub fn extern_block(&self) -> ::type_sitter::NodeResult<'tree, ExternBlock<'tree>> {
-        (0..::type_sitter::Node::raw(self).named_child_count())
-            .filter(|i| {
-                ::type_sitter::Node::raw(self)
-                    .field_name_for_named_child(*i as _)
-                    .is_none()
-            })
-            .map(|i| ::type_sitter::Node::raw(self).named_child(i).unwrap())
-            .filter(|n| !n.is_extra())
-            .next()
+    pub fn block(&self) -> ::type_sitter::NodeResult<'tree, ExternBlock<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("block")
             .map(<ExternBlock<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
@@ -970,7 +601,7 @@ impl<'tree> ::type_sitter::Node<'tree> for ExternDefinition<'tree> {
 }
 /**Typed node `extern_return`
 
-This node has a named child of type `identifier` ([`Identifier`])
+This node has a named child of type `type_annotation` ([`TypeAnnotation`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -981,14 +612,16 @@ pub struct ExternReturn<'tree>(::type_sitter::raw::Node<'tree>);
 impl<'tree> ExternReturn<'tree> {
     /**Get the node's only not-extra named child.
 
-This child has type `identifier` ([`Identifier`])*/
+This child has type `type_annotation` ([`TypeAnnotation`])*/
     #[inline]
-    pub fn identifier(&self) -> ::type_sitter::NodeResult<'tree, Identifier<'tree>> {
+    pub fn type_annotation(
+        &self,
+    ) -> ::type_sitter::NodeResult<'tree, TypeAnnotation<'tree>> {
         (0..::type_sitter::Node::raw(self).named_child_count())
             .map(|i| ::type_sitter::Node::raw(self).named_child(i).unwrap())
             .filter(|n| !n.is_extra())
             .next()
-            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .map(<TypeAnnotation<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
             )
@@ -996,7 +629,7 @@ This child has type `identifier` ([`Identifier`])*/
 }
 #[automatically_derived]
 impl<'tree> ::type_sitter::HasChild<'tree> for ExternReturn<'tree> {
-    type Child = Identifier<'tree>;
+    type Child = TypeAnnotation<'tree>;
 }
 #[automatically_derived]
 impl<'tree> ::type_sitter::Node<'tree> for ExternReturn<'tree> {
@@ -1132,7 +765,6 @@ impl<'tree> ::type_sitter::Node<'tree> for FactDefinition<'tree> {
 This node has these fields:
 
 - `name`: `identifier` ([`Identifier`])
-- `refinement`: `refinement?` ([`Refinement`])
 - `type`: `type_annotation` ([`TypeAnnotation`])
 
 And additional named children of type `attribute*` ([`Attribute`])
@@ -1155,17 +787,6 @@ This child has type `identifier` ([`Identifier`])*/
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
             )
-    }
-    /**Get the optional field `refinement`.
-
-This child has type `refinement?` ([`Refinement`])*/
-    #[inline]
-    pub fn refinement(
-        &self,
-    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, Refinement<'tree>>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("refinement")
-            .map(<Refinement<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
     }
     /**Get the field `type`.
 
@@ -1236,7 +857,7 @@ impl<'tree> ::type_sitter::Node<'tree> for FactFieldDefinition<'tree> {
 }
 /**Typed node `fqmn`
 
-This node has no named children
+This node has named children of type `identifier+` ([`Identifier`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -1244,7 +865,30 @@ This node has no named children
 pub struct Fqmn<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
-impl<'tree> Fqmn<'tree> {}
+impl<'tree> Fqmn<'tree> {
+    /**Get the node's not-extra named children.
+
+These children have type `identifier+` ([`Identifier`])*/
+    /**
+
+This is guaranteed to return at least one child.*/
+    #[inline]
+    pub fn identifiers<'a>(
+        &self,
+        c: &'a mut ::type_sitter::TreeCursor<'tree>,
+    ) -> impl ::std::iter::Iterator<
+        Item = ::type_sitter::NodeResult<'tree, Identifier<'tree>>,
+    > + 'a {
+        ::type_sitter::Node::raw(self)
+            .named_children(&mut c.0)
+            .filter(|n| !n.is_extra())
+            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+    }
+}
+#[automatically_derived]
+impl<'tree> ::type_sitter::HasChildren<'tree> for Fqmn<'tree> {
+    type Child = Identifier<'tree>;
+}
 #[automatically_derived]
 impl<'tree> ::type_sitter::Node<'tree> for Fqmn<'tree> {
     type WithLifetime<'a> = Fqmn<'a>;
@@ -1718,14 +1362,75 @@ impl<'tree> ::type_sitter::Node<'tree> for InExpression<'tree> {
         self.0
     }
 }
+/**Typed node `it`
+
+This node has these fields:
+
+- `it`: `it` ([`unnamed::It`])
+*/
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+pub struct It<'tree>(::type_sitter::raw::Node<'tree>);
+#[automatically_derived]
+#[allow(unused)]
+impl<'tree> It<'tree> {
+    /**Get the field `it`.
+
+This child has type `it` ([`unnamed::It`])*/
+    #[inline]
+    pub fn it(&self) -> ::type_sitter::NodeResult<'tree, unnamed::It<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("it")
+            .map(<unnamed::It<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .expect(
+                "required child not present, there should at least be a MISSING node in its place",
+            )
+    }
+}
+#[automatically_derived]
+impl<'tree> ::type_sitter::Node<'tree> for It<'tree> {
+    type WithLifetime<'a> = It<'a>;
+    const KIND: &'static str = "it";
+    #[inline]
+    fn try_from_raw(
+        node: ::type_sitter::raw::Node<'tree>,
+    ) -> ::type_sitter::NodeResult<'tree, Self> {
+        if node.kind() == "it" {
+            Ok(Self(node))
+        } else {
+            Err(::type_sitter::IncorrectKind::new::<Self>(node))
+        }
+    }
+    #[inline]
+    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
+        debug_assert_eq!(node.kind(), "it");
+        Self(node)
+    }
+    #[inline]
+    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+        &self.0
+    }
+    #[inline]
+    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+        &mut self.0
+    }
+    #[inline]
+    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+        self.0
+    }
+}
 /**Typed node `list_items`
 
-This node has named children of type `{binary_expression | call_expression | identifier | number | string}+`:
+This node has named children of type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}+`:
 
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
 - [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
 - [`String`]
 
 */
@@ -1738,7 +1443,7 @@ pub struct ListItems<'tree>(::type_sitter::raw::Node<'tree>);
 impl<'tree> ListItems<'tree> {}
 #[automatically_derived]
 impl<'tree> ::type_sitter::HasChildren<'tree> for ListItems<'tree> {
-    type Child = anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
+    type Child = anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
         'tree,
     >;
 }
@@ -2095,8 +1800,19 @@ impl<'tree> ::type_sitter::Node<'tree> for OperatorIdentifier<'tree> {
 
 This node has these fields:
 
-- `operator`: `{!= | < | <= | == | > | >=}` ([`symbols::NotEq`] | [`symbols::Lt`] | [`symbols::LtEq`] | [`symbols::EqEq`] | [`symbols::Gt`] | [`symbols::GtEq`])
-- `right`: `{binary_expression | call_expression | identifier | number | string}` ([`BinaryExpression`] | [`CallExpression`] | [`Identifier`] | [`Number`] | [`String`])
+- `operator`: `operator_identifier` ([`OperatorIdentifier`])
+
+And an additional named child of type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}`:
+
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
+- [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
+- [`String`]
+
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -2107,54 +1823,51 @@ pub struct OperatorSection<'tree>(::type_sitter::raw::Node<'tree>);
 impl<'tree> OperatorSection<'tree> {
     /**Get the field `operator`.
 
-This child has type `{!= | < | <= | == | > | >=}`:
-
-- [`symbols::NotEq`]
-- [`symbols::Lt`]
-- [`symbols::LtEq`]
-- [`symbols::EqEq`]
-- [`symbols::Gt`]
-- [`symbols::GtEq`]
-*/
+This child has type `operator_identifier` ([`OperatorIdentifier`])*/
     #[inline]
     pub fn operator(
         &self,
-    ) -> ::type_sitter::NodeResult<
-        'tree,
-        anon_unions::NotEq_Lt_LtEq_EqEq_Gt_GtEq<'tree>,
-    > {
+    ) -> ::type_sitter::NodeResult<'tree, OperatorIdentifier<'tree>> {
         ::type_sitter::Node::raw(self)
             .child_by_field_name("operator")
-            .map(
-                <anon_unions::NotEq_Lt_LtEq_EqEq_Gt_GtEq<
-                    'tree,
-                > as ::type_sitter::Node<'tree>>::try_from_raw,
-            )
+            .map(<OperatorIdentifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
             )
     }
-    /**Get the field `right`.
+    /**Get the node's only non-field not-extra named child.
 
-This child has type `{binary_expression | call_expression | identifier | number | string}`:
+This child has type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}`:
 
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
 - [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
 - [`String`]
 */
     #[inline]
-    pub fn right(
+    pub fn other(
         &self,
     ) -> ::type_sitter::NodeResult<
         'tree,
-        anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
+        anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+            'tree,
+        >,
     > {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("right")
+        (0..::type_sitter::Node::raw(self).named_child_count())
+            .filter(|i| {
+                ::type_sitter::Node::raw(self)
+                    .field_name_for_named_child(*i as _)
+                    .is_none()
+            })
+            .map(|i| ::type_sitter::Node::raw(self).named_child(i).unwrap())
+            .filter(|n| !n.is_extra())
+            .next()
             .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
+                <anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
                     'tree,
                 > as ::type_sitter::Node<'tree>>::try_from_raw,
             )
@@ -2180,6 +1893,65 @@ impl<'tree> ::type_sitter::Node<'tree> for OperatorSection<'tree> {
     #[inline]
     unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
         debug_assert_eq!(node.kind(), "operator_section");
+        Self(node)
+    }
+    #[inline]
+    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+        &self.0
+    }
+    #[inline]
+    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+        &mut self.0
+    }
+    #[inline]
+    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+        self.0
+    }
+}
+/**Typed node `parenthesized_expression`
+
+This node has named children of type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}+`:
+
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
+- [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
+- [`String`]
+
+*/
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+pub struct ParenthesizedExpression<'tree>(::type_sitter::raw::Node<'tree>);
+#[automatically_derived]
+#[allow(unused)]
+impl<'tree> ParenthesizedExpression<'tree> {}
+#[automatically_derived]
+impl<'tree> ::type_sitter::HasChildren<'tree> for ParenthesizedExpression<'tree> {
+    type Child = anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+        'tree,
+    >;
+}
+#[automatically_derived]
+impl<'tree> ::type_sitter::Node<'tree> for ParenthesizedExpression<'tree> {
+    type WithLifetime<'a> = ParenthesizedExpression<'a>;
+    const KIND: &'static str = "parenthesized_expression";
+    #[inline]
+    fn try_from_raw(
+        node: ::type_sitter::raw::Node<'tree>,
+    ) -> ::type_sitter::NodeResult<'tree, Self> {
+        if node.kind() == "parenthesized_expression" {
+            Ok(Self(node))
+        } else {
+            Err(::type_sitter::IncorrectKind::new::<Self>(node))
+        }
+    }
+    #[inline]
+    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
+        debug_assert_eq!(node.kind(), "parenthesized_expression");
         Self(node)
     }
     #[inline]
@@ -2242,6 +2014,7 @@ impl<'tree> ::type_sitter::Node<'tree> for PropertyAccess<'tree> {
 
 This node has these fields:
 
+- `grammar`: `fqmn` ([`Fqmn`])
 - `name`: `identifier` ([`Identifier`])
 - `value`: `query_literal` ([`QueryLiteral`])
 */
@@ -2252,6 +2025,18 @@ pub struct QueryDefinition<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
 impl<'tree> QueryDefinition<'tree> {
+    /**Get the field `grammar`.
+
+This child has type `fqmn` ([`Fqmn`])*/
+    #[inline]
+    pub fn grammar(&self) -> ::type_sitter::NodeResult<'tree, Fqmn<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("grammar")
+            .map(<Fqmn<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .expect(
+                "required child not present, there should at least be a MISSING node in its place",
+            )
+    }
     /**Get the field `name`.
 
 This child has type `identifier` ([`Identifier`])*/
@@ -2370,8 +2155,8 @@ impl<'tree> ::type_sitter::Node<'tree> for QueryLiteral<'tree> {
 
 This node has these fields:
 
-- `end`: `{binary_expression | call_expression | identifier | number | string}?` ([`BinaryExpression`] | [`CallExpression`] | [`Identifier`] | [`Number`] | [`String`])
-- `start`: `{binary_expression | call_expression | identifier | number | string}` ([`BinaryExpression`] | [`CallExpression`] | [`Identifier`] | [`Number`] | [`String`])
+- `end`: `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}?` ([`Fqmn`] | [`InExpression`] | [`It`] | [`Number`] | [`OperatorIdentifier`] | [`OperatorSection`] | [`ParenthesizedExpression`] | [`String`])
+- `start`: `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}` ([`Fqmn`] | [`InExpression`] | [`It`] | [`Number`] | [`OperatorIdentifier`] | [`OperatorSection`] | [`ParenthesizedExpression`] | [`String`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -2382,12 +2167,15 @@ pub struct Range<'tree>(::type_sitter::raw::Node<'tree>);
 impl<'tree> Range<'tree> {
     /**Get the optional field `end`.
 
-This child has type `{binary_expression | call_expression | identifier | number | string}?`:
+This child has type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}?`:
 
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
 - [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
 - [`String`]
 */
     #[inline]
@@ -2396,25 +2184,30 @@ This child has type `{binary_expression | call_expression | identifier | number 
     ) -> ::std::option::Option<
         ::type_sitter::NodeResult<
             'tree,
-            anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
+            anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+                'tree,
+            >,
         >,
     > {
         ::type_sitter::Node::raw(self)
             .child_by_field_name("end")
             .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
+                <anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
                     'tree,
                 > as ::type_sitter::Node<'tree>>::try_from_raw,
             )
     }
     /**Get the field `start`.
 
-This child has type `{binary_expression | call_expression | identifier | number | string}`:
+This child has type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}`:
 
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
 - [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
 - [`String`]
 */
     #[inline]
@@ -2422,12 +2215,14 @@ This child has type `{binary_expression | call_expression | identifier | number 
         &self,
     ) -> ::type_sitter::NodeResult<
         'tree,
-        anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<'tree>,
+        anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+            'tree,
+        >,
     > {
         ::type_sitter::Node::raw(self)
             .child_by_field_name("start")
             .map(
-                <anon_unions::BinaryExpression_CallExpression_Identifier_Number_String<
+                <anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
                     'tree,
                 > as ::type_sitter::Node<'tree>>::try_from_raw,
             )
@@ -2556,13 +2351,16 @@ impl<'tree> ::type_sitter::Node<'tree> for RawString<'tree> {
 }
 /**Typed node `refinement`
 
-This node has a named child of type `{binary_expression | call_expression | identifier | in_expression | operator_section}`:
+This node has named children of type `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}*`:
 
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
+- [`Fqmn`]
 - [`InExpression`]
+- [`It`]
+- [`Number`]
+- [`OperatorIdentifier`]
 - [`OperatorSection`]
+- [`ParenthesizedExpression`]
+- [`String`]
 
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -2573,8 +2371,8 @@ pub struct Refinement<'tree>(::type_sitter::raw::Node<'tree>);
 #[allow(unused)]
 impl<'tree> Refinement<'tree> {}
 #[automatically_derived]
-impl<'tree> ::type_sitter::HasChild<'tree> for Refinement<'tree> {
-    type Child = anon_unions::BinaryExpression_CallExpression_Identifier_InExpression_OperatorSection<
+impl<'tree> ::type_sitter::HasChildren<'tree> for Refinement<'tree> {
+    type Child = anon_unions::Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
         'tree,
     >;
 }
@@ -2764,11 +2562,13 @@ impl<'tree> ::type_sitter::Node<'tree> for String<'tree> {
 }
 /**Typed node `type_annotation`
 
-This node has these fields:
+This node has named children of type `{refinement | type_annotation | type_application | type_identifier}+`:
 
-- `arguments`: `type_arguments?` ([`TypeArguments`])
-- `name`: `type_identifier` ([`TypeIdentifier`])
-- `variable`: `identifier?` ([`Identifier`])
+- [`Refinement`]
+- [`TypeAnnotation`]
+- [`TypeApplication`]
+- [`TypeIdentifier`]
+
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -2776,41 +2576,12 @@ This node has these fields:
 pub struct TypeAnnotation<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
-impl<'tree> TypeAnnotation<'tree> {
-    /**Get the optional field `arguments`.
-
-This child has type `type_arguments?` ([`TypeArguments`])*/
-    #[inline]
-    pub fn arguments(
-        &self,
-    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, TypeArguments<'tree>>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("arguments")
-            .map(<TypeArguments<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
-    /**Get the field `name`.
-
-This child has type `type_identifier` ([`TypeIdentifier`])*/
-    #[inline]
-    pub fn name(&self) -> ::type_sitter::NodeResult<'tree, TypeIdentifier<'tree>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("name")
-            .map(<TypeIdentifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
-    }
-    /**Get the optional field `variable`.
-
-This child has type `identifier?` ([`Identifier`])*/
-    #[inline]
-    pub fn variable(
-        &self,
-    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, Identifier<'tree>>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("variable")
-            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
+impl<'tree> TypeAnnotation<'tree> {}
+#[automatically_derived]
+impl<'tree> ::type_sitter::HasChildren<'tree> for TypeAnnotation<'tree> {
+    type Child = anon_unions::Refinement_TypeAnnotation_TypeApplication_TypeIdentifier<
+        'tree,
+    >;
 }
 #[automatically_derived]
 impl<'tree> ::type_sitter::Node<'tree> for TypeAnnotation<'tree> {
@@ -2844,53 +2615,74 @@ impl<'tree> ::type_sitter::Node<'tree> for TypeAnnotation<'tree> {
         self.0
     }
 }
-/**Typed node `type_argument`
+/**Typed node `type_application`
 
 This node has these fields:
 
-- `refinement`: `refinement?` ([`Refinement`])
-- `type`: `type_annotation` ([`TypeAnnotation`])
+- `argument`: `{( | ) | type_annotation | type_identifier}+` ([`symbols::LParen`] | [`symbols::RParen`] | [`TypeAnnotation`] | [`TypeIdentifier`])
+- `constructor`: `type_identifier` ([`TypeIdentifier`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
-pub struct TypeArgument<'tree>(::type_sitter::raw::Node<'tree>);
+pub struct TypeApplication<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
-impl<'tree> TypeArgument<'tree> {
-    /**Get the optional field `refinement`.
+impl<'tree> TypeApplication<'tree> {
+    /**Get the children of field `argument`.
 
-This child has type `refinement?` ([`Refinement`])*/
+These children have type `{( | ) | type_annotation | type_identifier}+`:
+
+- [`symbols::LParen`]
+- [`symbols::RParen`]
+- [`TypeAnnotation`]
+- [`TypeIdentifier`]
+*/
+    /**
+
+This is guaranteed to return at least one child.*/
     #[inline]
-    pub fn refinement(
+    pub fn arguments<'a>(
         &self,
-    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, Refinement<'tree>>> {
+        c: &'a mut ::type_sitter::TreeCursor<'tree>,
+    ) -> impl ::std::iter::Iterator<
+        Item = ::type_sitter::NodeResult<
+            'tree,
+            anon_unions::LParen_RParen_TypeAnnotation_TypeIdentifier<'tree>,
+        >,
+    > + 'a {
         ::type_sitter::Node::raw(self)
-            .child_by_field_name("refinement")
-            .map(<Refinement<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .children_by_field_name("argument", &mut c.0)
+            .map(
+                <anon_unions::LParen_RParen_TypeAnnotation_TypeIdentifier<
+                    'tree,
+                > as ::type_sitter::Node<'tree>>::try_from_raw,
+            )
     }
-    /**Get the field `type`.
+    /**Get the field `constructor`.
 
-This child has type `type_annotation` ([`TypeAnnotation`])*/
+This child has type `type_identifier` ([`TypeIdentifier`])*/
     #[inline]
-    pub fn r#type(&self) -> ::type_sitter::NodeResult<'tree, TypeAnnotation<'tree>> {
+    pub fn constructor(
+        &self,
+    ) -> ::type_sitter::NodeResult<'tree, TypeIdentifier<'tree>> {
         ::type_sitter::Node::raw(self)
-            .child_by_field_name("type")
-            .map(<TypeAnnotation<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .child_by_field_name("constructor")
+            .map(<TypeIdentifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
             .expect(
                 "required child not present, there should at least be a MISSING node in its place",
             )
     }
 }
 #[automatically_derived]
-impl<'tree> ::type_sitter::Node<'tree> for TypeArgument<'tree> {
-    type WithLifetime<'a> = TypeArgument<'a>;
-    const KIND: &'static str = "type_argument";
+impl<'tree> ::type_sitter::Node<'tree> for TypeApplication<'tree> {
+    type WithLifetime<'a> = TypeApplication<'a>;
+    const KIND: &'static str = "type_application";
     #[inline]
     fn try_from_raw(
         node: ::type_sitter::raw::Node<'tree>,
     ) -> ::type_sitter::NodeResult<'tree, Self> {
-        if node.kind() == "type_argument" {
+        if node.kind() == "type_application" {
             Ok(Self(node))
         } else {
             Err(::type_sitter::IncorrectKind::new::<Self>(node))
@@ -2898,73 +2690,7 @@ impl<'tree> ::type_sitter::Node<'tree> for TypeArgument<'tree> {
     }
     #[inline]
     unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-        debug_assert_eq!(node.kind(), "type_argument");
-        Self(node)
-    }
-    #[inline]
-    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-        &self.0
-    }
-    #[inline]
-    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-        &mut self.0
-    }
-    #[inline]
-    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-        self.0
-    }
-}
-/**Typed node `type_arguments`
-
-This node has named children of type `type_argument+` ([`TypeArgument`])
-*/
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-#[allow(non_camel_case_types)]
-pub struct TypeArguments<'tree>(::type_sitter::raw::Node<'tree>);
-#[automatically_derived]
-#[allow(unused)]
-impl<'tree> TypeArguments<'tree> {
-    /**Get the node's not-extra named children.
-
-These children have type `type_argument+` ([`TypeArgument`])*/
-    /**
-
-This is guaranteed to return at least one child.*/
-    #[inline]
-    pub fn type_arguments<'a>(
-        &self,
-        c: &'a mut ::type_sitter::TreeCursor<'tree>,
-    ) -> impl ::std::iter::Iterator<
-        Item = ::type_sitter::NodeResult<'tree, TypeArgument<'tree>>,
-    > + 'a {
-        ::type_sitter::Node::raw(self)
-            .named_children(&mut c.0)
-            .filter(|n| !n.is_extra())
-            .map(<TypeArgument<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::HasChildren<'tree> for TypeArguments<'tree> {
-    type Child = TypeArgument<'tree>;
-}
-#[automatically_derived]
-impl<'tree> ::type_sitter::Node<'tree> for TypeArguments<'tree> {
-    type WithLifetime<'a> = TypeArguments<'a>;
-    const KIND: &'static str = "type_arguments";
-    #[inline]
-    fn try_from_raw(
-        node: ::type_sitter::raw::Node<'tree>,
-    ) -> ::type_sitter::NodeResult<'tree, Self> {
-        if node.kind() == "type_arguments" {
-            Ok(Self(node))
-        } else {
-            Err(::type_sitter::IncorrectKind::new::<Self>(node))
-        }
-    }
-    #[inline]
-    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-        debug_assert_eq!(node.kind(), "type_arguments");
+        debug_assert_eq!(node.kind(), "type_application");
         Self(node)
     }
     #[inline]
@@ -2984,9 +2710,10 @@ impl<'tree> ::type_sitter::Node<'tree> for TypeArguments<'tree> {
 
 This node has these fields:
 
+- `body`: `type_definition` ([`TypeDefinition`])
 - `name`: `identifier` ([`Identifier`])
-- `refinement`: `refinement?` ([`Refinement`])
-- `type`: `type_annotation` ([`TypeAnnotation`])
+
+And additional named children of type `attribute*` ([`Attribute`])
 */
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -2995,6 +2722,18 @@ pub struct TypeDeclaration<'tree>(::type_sitter::raw::Node<'tree>);
 #[automatically_derived]
 #[allow(unused)]
 impl<'tree> TypeDeclaration<'tree> {
+    /**Get the field `body`.
+
+This child has type `type_definition` ([`TypeDefinition`])*/
+    #[inline]
+    pub fn body(&self) -> ::type_sitter::NodeResult<'tree, TypeDefinition<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("body")
+            .map(<TypeDefinition<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .expect(
+                "required child not present, there should at least be a MISSING node in its place",
+            )
+    }
     /**Get the field `name`.
 
 This child has type `identifier` ([`Identifier`])*/
@@ -3007,28 +2746,27 @@ This child has type `identifier` ([`Identifier`])*/
                 "required child not present, there should at least be a MISSING node in its place",
             )
     }
-    /**Get the optional field `refinement`.
+    /**Get the node's non-field not-extra named children.
 
-This child has type `refinement?` ([`Refinement`])*/
+These children have type `attribute*` ([`Attribute`])*/
     #[inline]
-    pub fn refinement(
+    pub fn attributes<'a>(
         &self,
-    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, Refinement<'tree>>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("refinement")
-            .map(<Refinement<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-    }
-    /**Get the field `type`.
-
-This child has type `type_annotation` ([`TypeAnnotation`])*/
-    #[inline]
-    pub fn r#type(&self) -> ::type_sitter::NodeResult<'tree, TypeAnnotation<'tree>> {
-        ::type_sitter::Node::raw(self)
-            .child_by_field_name("type")
-            .map(<TypeAnnotation<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
-            .expect(
-                "required child not present, there should at least be a MISSING node in its place",
-            )
+        c: &'a mut ::type_sitter::TreeCursor<'tree>,
+    ) -> impl ::std::iter::Iterator<
+        Item = ::type_sitter::NodeResult<'tree, Attribute<'tree>>,
+    > + 'a {
+        {
+            let me = *::type_sitter::Node::raw(self);
+            ::type_sitter::Node::raw(self)
+                .named_children(&mut c.0)
+                .enumerate()
+                .filter(move |(i, n)| {
+                    !n.is_extra() && me.field_name_for_named_child(*i as _).is_none()
+                })
+                .map(|(_, n)| n)
+        }
+            .map(<Attribute<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
     }
 }
 #[automatically_derived]
@@ -3048,6 +2786,160 @@ impl<'tree> ::type_sitter::Node<'tree> for TypeDeclaration<'tree> {
     #[inline]
     unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
         debug_assert_eq!(node.kind(), "type_declaration");
+        Self(node)
+    }
+    #[inline]
+    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+        &self.0
+    }
+    #[inline]
+    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+        &mut self.0
+    }
+    #[inline]
+    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+        self.0
+    }
+}
+/**Typed node `type_definition`
+
+This node has these fields:
+
+- `type`: `type_annotation?` ([`TypeAnnotation`])
+
+And additional named children of type `type_field_definition*` ([`TypeFieldDefinition`])
+*/
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+pub struct TypeDefinition<'tree>(::type_sitter::raw::Node<'tree>);
+#[automatically_derived]
+#[allow(unused)]
+impl<'tree> TypeDefinition<'tree> {
+    /**Get the optional field `type`.
+
+This child has type `type_annotation?` ([`TypeAnnotation`])*/
+    #[inline]
+    pub fn r#type(
+        &self,
+    ) -> ::std::option::Option<::type_sitter::NodeResult<'tree, TypeAnnotation<'tree>>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("type")
+            .map(<TypeAnnotation<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+    }
+    /**Get the node's non-field not-extra named children.
+
+These children have type `type_field_definition*` ([`TypeFieldDefinition`])*/
+    #[inline]
+    pub fn type_field_definitions<'a>(
+        &self,
+        c: &'a mut ::type_sitter::TreeCursor<'tree>,
+    ) -> impl ::std::iter::Iterator<
+        Item = ::type_sitter::NodeResult<'tree, TypeFieldDefinition<'tree>>,
+    > + 'a {
+        {
+            let me = *::type_sitter::Node::raw(self);
+            ::type_sitter::Node::raw(self)
+                .named_children(&mut c.0)
+                .enumerate()
+                .filter(move |(i, n)| {
+                    !n.is_extra() && me.field_name_for_named_child(*i as _).is_none()
+                })
+                .map(|(_, n)| n)
+        }
+            .map(
+                <TypeFieldDefinition<'tree> as ::type_sitter::Node<'tree>>::try_from_raw,
+            )
+    }
+}
+#[automatically_derived]
+impl<'tree> ::type_sitter::Node<'tree> for TypeDefinition<'tree> {
+    type WithLifetime<'a> = TypeDefinition<'a>;
+    const KIND: &'static str = "type_definition";
+    #[inline]
+    fn try_from_raw(
+        node: ::type_sitter::raw::Node<'tree>,
+    ) -> ::type_sitter::NodeResult<'tree, Self> {
+        if node.kind() == "type_definition" {
+            Ok(Self(node))
+        } else {
+            Err(::type_sitter::IncorrectKind::new::<Self>(node))
+        }
+    }
+    #[inline]
+    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
+        debug_assert_eq!(node.kind(), "type_definition");
+        Self(node)
+    }
+    #[inline]
+    fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+        &self.0
+    }
+    #[inline]
+    fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+        &mut self.0
+    }
+    #[inline]
+    fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+        self.0
+    }
+}
+/**Typed node `type_field_definition`
+
+This node has these fields:
+
+- `name`: `identifier` ([`Identifier`])
+- `type`: `type_definition` ([`TypeDefinition`])
+*/
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+pub struct TypeFieldDefinition<'tree>(::type_sitter::raw::Node<'tree>);
+#[automatically_derived]
+#[allow(unused)]
+impl<'tree> TypeFieldDefinition<'tree> {
+    /**Get the field `name`.
+
+This child has type `identifier` ([`Identifier`])*/
+    #[inline]
+    pub fn name(&self) -> ::type_sitter::NodeResult<'tree, Identifier<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("name")
+            .map(<Identifier<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .expect(
+                "required child not present, there should at least be a MISSING node in its place",
+            )
+    }
+    /**Get the field `type`.
+
+This child has type `type_definition` ([`TypeDefinition`])*/
+    #[inline]
+    pub fn r#type(&self) -> ::type_sitter::NodeResult<'tree, TypeDefinition<'tree>> {
+        ::type_sitter::Node::raw(self)
+            .child_by_field_name("type")
+            .map(<TypeDefinition<'tree> as ::type_sitter::Node<'tree>>::try_from_raw)
+            .expect(
+                "required child not present, there should at least be a MISSING node in its place",
+            )
+    }
+}
+#[automatically_derived]
+impl<'tree> ::type_sitter::Node<'tree> for TypeFieldDefinition<'tree> {
+    type WithLifetime<'a> = TypeFieldDefinition<'a>;
+    const KIND: &'static str = "type_field_definition";
+    #[inline]
+    fn try_from_raw(
+        node: ::type_sitter::raw::Node<'tree>,
+    ) -> ::type_sitter::NodeResult<'tree, Self> {
+        if node.kind() == "type_field_definition" {
+            Ok(Self(node))
+        } else {
+            Err(::type_sitter::IncorrectKind::new::<Self>(node))
+        }
+    }
+    #[inline]
+    unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
+        debug_assert_eq!(node.kind(), "type_field_definition");
         Self(node)
     }
     #[inline]
@@ -3406,6 +3298,49 @@ This node has no named children
             self.0
         }
     }
+    /**Typed node `it`
+
+This node has no named children
+*/
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[repr(transparent)]
+    #[allow(non_camel_case_types)]
+    pub struct It<'tree>(::type_sitter::raw::Node<'tree>);
+    #[automatically_derived]
+    #[allow(unused)]
+    impl<'tree> It<'tree> {}
+    #[automatically_derived]
+    impl<'tree> ::type_sitter::Node<'tree> for It<'tree> {
+        type WithLifetime<'a> = It<'a>;
+        const KIND: &'static str = "it";
+        #[inline]
+        fn try_from_raw(
+            node: ::type_sitter::raw::Node<'tree>,
+        ) -> ::type_sitter::NodeResult<'tree, Self> {
+            if node.kind() == "it" {
+                Ok(Self(node))
+            } else {
+                Err(::type_sitter::IncorrectKind::new::<Self>(node))
+            }
+        }
+        #[inline]
+        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
+            debug_assert_eq!(node.kind(), "it");
+            Self(node)
+        }
+        #[inline]
+        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+            &self.0
+        }
+        #[inline]
+        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+            &mut self.0
+        }
+        #[inline]
+        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+            self.0
+        }
+    }
     /**Typed node `match`
 
 This node has no named children
@@ -3664,30 +3599,26 @@ This node has no named children
             self.0
         }
     }
-}
-pub mod symbols {
-    #[allow(unused_imports)]
-    use super::*;
-    /**Typed node `!=`
+    /**Typed node `where`
 
 This node has no named children
 */
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     #[repr(transparent)]
     #[allow(non_camel_case_types)]
-    pub struct NotEq<'tree>(::type_sitter::raw::Node<'tree>);
+    pub struct Where<'tree>(::type_sitter::raw::Node<'tree>);
     #[automatically_derived]
     #[allow(unused)]
-    impl<'tree> NotEq<'tree> {}
+    impl<'tree> Where<'tree> {}
     #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for NotEq<'tree> {
-        type WithLifetime<'a> = NotEq<'a>;
-        const KIND: &'static str = "!=";
+    impl<'tree> ::type_sitter::Node<'tree> for Where<'tree> {
+        type WithLifetime<'a> = Where<'a>;
+        const KIND: &'static str = "where";
         #[inline]
         fn try_from_raw(
             node: ::type_sitter::raw::Node<'tree>,
         ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "!=" {
+            if node.kind() == "where" {
                 Ok(Self(node))
             } else {
                 Err(::type_sitter::IncorrectKind::new::<Self>(node))
@@ -3695,7 +3626,7 @@ This node has no named children
         }
         #[inline]
         unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "!=");
+            debug_assert_eq!(node.kind(), "where");
             Self(node)
         }
         #[inline]
@@ -3711,6 +3642,10 @@ This node has no named children
             self.0
         }
     }
+}
+pub mod symbols {
+    #[allow(unused_imports)]
+    use super::*;
     /**Typed node `#`
 
 This node has no named children
@@ -3840,92 +3775,6 @@ This node has no named children
             self.0
         }
     }
-    /**Typed node `*`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Mul<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Mul<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Mul<'tree> {
-        type WithLifetime<'a> = Mul<'a>;
-        const KIND: &'static str = "*";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "*" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "*");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `+`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Add<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Add<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Add<'tree> {
-        type WithLifetime<'a> = Add<'a>;
-        const KIND: &'static str = "+";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "+" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "+");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
     /**Typed node `,`
 
 This node has no named children
@@ -3954,49 +3803,6 @@ This node has no named children
         #[inline]
         unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
             debug_assert_eq!(node.kind(), ",");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `-`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Sub<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Sub<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Sub<'tree> {
-        type WithLifetime<'a> = Sub<'a>;
-        const KIND: &'static str = "-";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "-" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "-");
             Self(node)
         }
         #[inline]
@@ -4141,49 +3947,6 @@ This node has no named children
             self.0
         }
     }
-    /**Typed node `/`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Div<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Div<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Div<'tree> {
-        type WithLifetime<'a> = Div<'a>;
-        const KIND: &'static str = "/";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "/" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "/");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
     /**Typed node `:`
 
 This node has no named children
@@ -4212,92 +3975,6 @@ This node has no named children
         #[inline]
         unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
             debug_assert_eq!(node.kind(), ":");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `::`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct ColonColon<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> ColonColon<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for ColonColon<'tree> {
-        type WithLifetime<'a> = ColonColon<'a>;
-        const KIND: &'static str = "::";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "::" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "::");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `<`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Lt<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Lt<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Lt<'tree> {
-        type WithLifetime<'a> = Lt<'a>;
-        const KIND: &'static str = "<";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "<" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "<");
             Self(node)
         }
         #[inline]
@@ -4399,49 +4076,6 @@ This node has no named children
             self.0
         }
     }
-    /**Typed node `<=`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct LtEq<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> LtEq<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for LtEq<'tree> {
-        type WithLifetime<'a> = LtEq<'a>;
-        const KIND: &'static str = "<=";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "<=" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "<=");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
     /**Typed node `=`
 
 This node has no named children
@@ -4470,135 +4104,6 @@ This node has no named children
         #[inline]
         unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
             debug_assert_eq!(node.kind(), "=");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `==`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct EqEq<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> EqEq<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for EqEq<'tree> {
-        type WithLifetime<'a> = EqEq<'a>;
-        const KIND: &'static str = "==";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "==" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "==");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `>`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Gt<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Gt<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Gt<'tree> {
-        type WithLifetime<'a> = Gt<'a>;
-        const KIND: &'static str = ">";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == ">" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), ">");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
-    /**Typed node `>=`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct GtEq<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> GtEq<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for GtEq<'tree> {
-        type WithLifetime<'a> = GtEq<'a>;
-        const KIND: &'static str = ">=";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == ">=" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), ">=");
             Self(node)
         }
         #[inline]
@@ -4829,49 +4334,6 @@ This node has no named children
             self.0
         }
     }
-    /**Typed node `|`
-
-This node has no named children
-*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[repr(transparent)]
-    #[allow(non_camel_case_types)]
-    pub struct Or<'tree>(::type_sitter::raw::Node<'tree>);
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> Or<'tree> {}
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for Or<'tree> {
-        type WithLifetime<'a> = Or<'a>;
-        const KIND: &'static str = "|";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            if node.kind() == "|" {
-                Ok(Self(node))
-            } else {
-                Err(::type_sitter::IncorrectKind::new::<Self>(node))
-            }
-        }
-        #[inline]
-        unsafe fn from_raw_unchecked(node: ::type_sitter::raw::Node<'tree>) -> Self {
-            debug_assert_eq!(node.kind(), "|");
-            Self(node)
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            &self.0
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            &mut self.0
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            self.0
-        }
-    }
     /**Typed node `}`
 
 This node has no named children
@@ -5015,336 +4477,6 @@ This child has type `identifier` ([`Identifier`])*/
             match self {
                 Self::Attribute(x) => x.into_raw(),
                 Self::FactFieldDefinition(x) => x.into_raw(),
-            }
-        }
-    }
-    /**One of `{binary_expression | call_expression | identifier | in_expression | operator_section}`:
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`InExpression`]
-- [`OperatorSection`]*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[allow(non_camel_case_types)]
-    pub enum BinaryExpression_CallExpression_Identifier_InExpression_OperatorSection<
-        'tree,
-    > {
-        BinaryExpression(BinaryExpression<'tree>),
-        CallExpression(CallExpression<'tree>),
-        Identifier(Identifier<'tree>),
-        InExpression(InExpression<'tree>),
-        OperatorSection(OperatorSection<'tree>),
-    }
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<
-        'tree,
-    > BinaryExpression_CallExpression_Identifier_InExpression_OperatorSection<'tree> {
-        ///Returns the node if it is of type `binary_expression` ([`BinaryExpression`]), otherwise returns `None`
-        #[inline]
-        pub fn as_binary_expression(
-            self,
-        ) -> ::std::option::Option<BinaryExpression<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::BinaryExpression(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `call_expression` ([`CallExpression`]), otherwise returns `None`
-        #[inline]
-        pub fn as_call_expression(self) -> ::std::option::Option<CallExpression<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::CallExpression(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `identifier` ([`Identifier`]), otherwise returns `None`
-        #[inline]
-        pub fn as_identifier(self) -> ::std::option::Option<Identifier<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Identifier(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `in_expression` ([`InExpression`]), otherwise returns `None`
-        #[inline]
-        pub fn as_in_expression(self) -> ::std::option::Option<InExpression<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::InExpression(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `operator_section` ([`OperatorSection`]), otherwise returns `None`
-        #[inline]
-        pub fn as_operator_section(
-            self,
-        ) -> ::std::option::Option<OperatorSection<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::OperatorSection(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-    }
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree>
-    for BinaryExpression_CallExpression_Identifier_InExpression_OperatorSection<'tree> {
-        type WithLifetime<'a> = BinaryExpression_CallExpression_Identifier_InExpression_OperatorSection<
-            'a,
-        >;
-        const KIND: &'static str = "{binary_expression | call_expression | identifier | in_expression | operator_section}";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            match node.kind() {
-                "binary_expression" => {
-                    Ok(unsafe {
-                        Self::BinaryExpression(
-                            <BinaryExpression<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "call_expression" => {
-                    Ok(unsafe {
-                        Self::CallExpression(
-                            <CallExpression<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "identifier" => {
-                    Ok(unsafe {
-                        Self::Identifier(
-                            <Identifier<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "in_expression" => {
-                    Ok(unsafe {
-                        Self::InExpression(
-                            <InExpression<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "operator_section" => {
-                    Ok(unsafe {
-                        Self::OperatorSection(
-                            <OperatorSection<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                _ => Err(::type_sitter::IncorrectKind::new::<Self>(node)),
-            }
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => ::type_sitter::Node::raw(x),
-                Self::CallExpression(x) => ::type_sitter::Node::raw(x),
-                Self::Identifier(x) => ::type_sitter::Node::raw(x),
-                Self::InExpression(x) => ::type_sitter::Node::raw(x),
-                Self::OperatorSection(x) => ::type_sitter::Node::raw(x),
-            }
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => ::type_sitter::Node::raw_mut(x),
-                Self::CallExpression(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Identifier(x) => ::type_sitter::Node::raw_mut(x),
-                Self::InExpression(x) => ::type_sitter::Node::raw_mut(x),
-                Self::OperatorSection(x) => ::type_sitter::Node::raw_mut(x),
-            }
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => x.into_raw(),
-                Self::CallExpression(x) => x.into_raw(),
-                Self::Identifier(x) => x.into_raw(),
-                Self::InExpression(x) => x.into_raw(),
-                Self::OperatorSection(x) => x.into_raw(),
-            }
-        }
-    }
-    /**One of `{binary_expression | call_expression | identifier | number | string}`:
-- [`BinaryExpression`]
-- [`CallExpression`]
-- [`Identifier`]
-- [`Number`]
-- [`String`]*/
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[allow(non_camel_case_types)]
-    pub enum BinaryExpression_CallExpression_Identifier_Number_String<'tree> {
-        BinaryExpression(BinaryExpression<'tree>),
-        CallExpression(CallExpression<'tree>),
-        Identifier(Identifier<'tree>),
-        Number(Number<'tree>),
-        String(String<'tree>),
-    }
-    #[automatically_derived]
-    #[allow(unused)]
-    impl<'tree> BinaryExpression_CallExpression_Identifier_Number_String<'tree> {
-        ///Returns the node if it is of type `binary_expression` ([`BinaryExpression`]), otherwise returns `None`
-        #[inline]
-        pub fn as_binary_expression(
-            self,
-        ) -> ::std::option::Option<BinaryExpression<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::BinaryExpression(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `call_expression` ([`CallExpression`]), otherwise returns `None`
-        #[inline]
-        pub fn as_call_expression(self) -> ::std::option::Option<CallExpression<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::CallExpression(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `identifier` ([`Identifier`]), otherwise returns `None`
-        #[inline]
-        pub fn as_identifier(self) -> ::std::option::Option<Identifier<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Identifier(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `number` ([`Number`]), otherwise returns `None`
-        #[inline]
-        pub fn as_number(self) -> ::std::option::Option<Number<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Number(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `string` ([`String`]), otherwise returns `None`
-        #[inline]
-        pub fn as_string(self) -> ::std::option::Option<String<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::String(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-    }
-    #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree>
-    for BinaryExpression_CallExpression_Identifier_Number_String<'tree> {
-        type WithLifetime<'a> = BinaryExpression_CallExpression_Identifier_Number_String<
-            'a,
-        >;
-        const KIND: &'static str = "{binary_expression | call_expression | identifier | number | string}";
-        #[inline]
-        fn try_from_raw(
-            node: ::type_sitter::raw::Node<'tree>,
-        ) -> ::type_sitter::NodeResult<'tree, Self> {
-            match node.kind() {
-                "binary_expression" => {
-                    Ok(unsafe {
-                        Self::BinaryExpression(
-                            <BinaryExpression<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "call_expression" => {
-                    Ok(unsafe {
-                        Self::CallExpression(
-                            <CallExpression<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "identifier" => {
-                    Ok(unsafe {
-                        Self::Identifier(
-                            <Identifier<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "number" => {
-                    Ok(unsafe {
-                        Self::Number(
-                            <Number<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "string" => {
-                    Ok(unsafe {
-                        Self::String(
-                            <String<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                _ => Err(::type_sitter::IncorrectKind::new::<Self>(node)),
-            }
-        }
-        #[inline]
-        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => ::type_sitter::Node::raw(x),
-                Self::CallExpression(x) => ::type_sitter::Node::raw(x),
-                Self::Identifier(x) => ::type_sitter::Node::raw(x),
-                Self::Number(x) => ::type_sitter::Node::raw(x),
-                Self::String(x) => ::type_sitter::Node::raw(x),
-            }
-        }
-        #[inline]
-        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => ::type_sitter::Node::raw_mut(x),
-                Self::CallExpression(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Identifier(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Number(x) => ::type_sitter::Node::raw_mut(x),
-                Self::String(x) => ::type_sitter::Node::raw_mut(x),
-            }
-        }
-        #[inline]
-        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
-            match self {
-                Self::BinaryExpression(x) => x.into_raw(),
-                Self::CallExpression(x) => x.into_raw(),
-                Self::Identifier(x) => x.into_raw(),
-                Self::Number(x) => x.into_raw(),
-                Self::String(x) => x.into_raw(),
             }
         }
     }
@@ -5771,6 +4903,252 @@ This child has type `identifier` ([`Identifier`])*/
             }
         }
     }
+    /**One of `{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}`:
+- [`Fqmn`]
+- [`InExpression`]
+- [`It`]
+- [`Number`]
+- [`OperatorIdentifier`]
+- [`OperatorSection`]
+- [`ParenthesizedExpression`]
+- [`String`]*/
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[allow(non_camel_case_types)]
+    pub enum Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+        'tree,
+    > {
+        Fqmn(Fqmn<'tree>),
+        InExpression(InExpression<'tree>),
+        It(It<'tree>),
+        Number(Number<'tree>),
+        OperatorIdentifier(OperatorIdentifier<'tree>),
+        OperatorSection(OperatorSection<'tree>),
+        ParenthesizedExpression(ParenthesizedExpression<'tree>),
+        String(String<'tree>),
+    }
+    #[automatically_derived]
+    #[allow(unused)]
+    impl<
+        'tree,
+    > Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+        'tree,
+    > {
+        ///Returns the node if it is of type `fqmn` ([`Fqmn`]), otherwise returns `None`
+        #[inline]
+        pub fn as_fqmn(self) -> ::std::option::Option<Fqmn<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::Fqmn(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `in_expression` ([`InExpression`]), otherwise returns `None`
+        #[inline]
+        pub fn as_in_expression(self) -> ::std::option::Option<InExpression<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::InExpression(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `it` ([`It`]), otherwise returns `None`
+        #[inline]
+        pub fn as_it(self) -> ::std::option::Option<It<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::It(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `number` ([`Number`]), otherwise returns `None`
+        #[inline]
+        pub fn as_number(self) -> ::std::option::Option<Number<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::Number(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `operator_identifier` ([`OperatorIdentifier`]), otherwise returns `None`
+        #[inline]
+        pub fn as_operator_identifier(
+            self,
+        ) -> ::std::option::Option<OperatorIdentifier<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::OperatorIdentifier(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `operator_section` ([`OperatorSection`]), otherwise returns `None`
+        #[inline]
+        pub fn as_operator_section(
+            self,
+        ) -> ::std::option::Option<OperatorSection<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::OperatorSection(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `parenthesized_expression` ([`ParenthesizedExpression`]), otherwise returns `None`
+        #[inline]
+        pub fn as_parenthesized_expression(
+            self,
+        ) -> ::std::option::Option<ParenthesizedExpression<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::ParenthesizedExpression(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `string` ([`String`]), otherwise returns `None`
+        #[inline]
+        pub fn as_string(self) -> ::std::option::Option<String<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::String(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+    }
+    #[automatically_derived]
+    impl<'tree> ::type_sitter::Node<'tree>
+    for Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+        'tree,
+    > {
+        type WithLifetime<'a> = Fqmn_InExpression_It_Number_OperatorIdentifier_OperatorSection_ParenthesizedExpression_String<
+            'a,
+        >;
+        const KIND: &'static str = "{fqmn | in_expression | it | number | operator_identifier | operator_section | parenthesized_expression | string}";
+        #[inline]
+        fn try_from_raw(
+            node: ::type_sitter::raw::Node<'tree>,
+        ) -> ::type_sitter::NodeResult<'tree, Self> {
+            match node.kind() {
+                "fqmn" => {
+                    Ok(unsafe {
+                        Self::Fqmn(
+                            <Fqmn<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "in_expression" => {
+                    Ok(unsafe {
+                        Self::InExpression(
+                            <InExpression<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "it" => {
+                    Ok(unsafe {
+                        Self::It(
+                            <It<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "number" => {
+                    Ok(unsafe {
+                        Self::Number(
+                            <Number<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "operator_identifier" => {
+                    Ok(unsafe {
+                        Self::OperatorIdentifier(
+                            <OperatorIdentifier<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "operator_section" => {
+                    Ok(unsafe {
+                        Self::OperatorSection(
+                            <OperatorSection<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "parenthesized_expression" => {
+                    Ok(unsafe {
+                        Self::ParenthesizedExpression(
+                            <ParenthesizedExpression<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "string" => {
+                    Ok(unsafe {
+                        Self::String(
+                            <String<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                _ => Err(::type_sitter::IncorrectKind::new::<Self>(node)),
+            }
+        }
+        #[inline]
+        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::Fqmn(x) => ::type_sitter::Node::raw(x),
+                Self::InExpression(x) => ::type_sitter::Node::raw(x),
+                Self::It(x) => ::type_sitter::Node::raw(x),
+                Self::Number(x) => ::type_sitter::Node::raw(x),
+                Self::OperatorIdentifier(x) => ::type_sitter::Node::raw(x),
+                Self::OperatorSection(x) => ::type_sitter::Node::raw(x),
+                Self::ParenthesizedExpression(x) => ::type_sitter::Node::raw(x),
+                Self::String(x) => ::type_sitter::Node::raw(x),
+            }
+        }
+        #[inline]
+        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::Fqmn(x) => ::type_sitter::Node::raw_mut(x),
+                Self::InExpression(x) => ::type_sitter::Node::raw_mut(x),
+                Self::It(x) => ::type_sitter::Node::raw_mut(x),
+                Self::Number(x) => ::type_sitter::Node::raw_mut(x),
+                Self::OperatorIdentifier(x) => ::type_sitter::Node::raw_mut(x),
+                Self::OperatorSection(x) => ::type_sitter::Node::raw_mut(x),
+                Self::ParenthesizedExpression(x) => ::type_sitter::Node::raw_mut(x),
+                Self::String(x) => ::type_sitter::Node::raw_mut(x),
+            }
+        }
+        #[inline]
+        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::Fqmn(x) => x.into_raw(),
+                Self::InExpression(x) => x.into_raw(),
+                Self::It(x) => x.into_raw(),
+                Self::Number(x) => x.into_raw(),
+                Self::OperatorIdentifier(x) => x.into_raw(),
+                Self::OperatorSection(x) => x.into_raw(),
+                Self::ParenthesizedExpression(x) => x.into_raw(),
+                Self::String(x) => x.into_raw(),
+            }
+        }
+    }
     /**One of `{identifier | raw_string}`:
 - [`Identifier`]
 - [`RawString`]*/
@@ -5941,6 +5319,140 @@ This child has type `identifier` ([`Identifier`])*/
             }
         }
     }
+    /**One of `{( | ) | type_annotation | type_identifier}`:
+- [`symbols::LParen`]
+- [`symbols::RParen`]
+- [`TypeAnnotation`]
+- [`TypeIdentifier`]*/
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[allow(non_camel_case_types)]
+    pub enum LParen_RParen_TypeAnnotation_TypeIdentifier<'tree> {
+        LParen(symbols::LParen<'tree>),
+        RParen(symbols::RParen<'tree>),
+        TypeAnnotation(TypeAnnotation<'tree>),
+        TypeIdentifier(TypeIdentifier<'tree>),
+    }
+    #[automatically_derived]
+    #[allow(unused)]
+    impl<'tree> LParen_RParen_TypeAnnotation_TypeIdentifier<'tree> {
+        ///Returns the node if it is of type `(` ([`symbols::LParen`]), otherwise returns `None`
+        #[inline]
+        pub fn as_l_paren(self) -> ::std::option::Option<symbols::LParen<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::LParen(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `)` ([`symbols::RParen`]), otherwise returns `None`
+        #[inline]
+        pub fn as_r_paren(self) -> ::std::option::Option<symbols::RParen<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::RParen(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `type_annotation` ([`TypeAnnotation`]), otherwise returns `None`
+        #[inline]
+        pub fn as_type_annotation(self) -> ::std::option::Option<TypeAnnotation<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::TypeAnnotation(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+        ///Returns the node if it is of type `type_identifier` ([`TypeIdentifier`]), otherwise returns `None`
+        #[inline]
+        pub fn as_type_identifier(self) -> ::std::option::Option<TypeIdentifier<'tree>> {
+            #[allow(irrefutable_let_patterns)]
+            if let Self::TypeIdentifier(x) = self {
+                ::std::option::Option::Some(x)
+            } else {
+                ::std::option::Option::None
+            }
+        }
+    }
+    #[automatically_derived]
+    impl<'tree> ::type_sitter::Node<'tree>
+    for LParen_RParen_TypeAnnotation_TypeIdentifier<'tree> {
+        type WithLifetime<'a> = LParen_RParen_TypeAnnotation_TypeIdentifier<'a>;
+        const KIND: &'static str = "{( | ) | type_annotation | type_identifier}";
+        #[inline]
+        fn try_from_raw(
+            node: ::type_sitter::raw::Node<'tree>,
+        ) -> ::type_sitter::NodeResult<'tree, Self> {
+            match node.kind() {
+                "(" => {
+                    Ok(unsafe {
+                        Self::LParen(
+                            <symbols::LParen<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                ")" => {
+                    Ok(unsafe {
+                        Self::RParen(
+                            <symbols::RParen<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "type_annotation" => {
+                    Ok(unsafe {
+                        Self::TypeAnnotation(
+                            <TypeAnnotation<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                "type_identifier" => {
+                    Ok(unsafe {
+                        Self::TypeIdentifier(
+                            <TypeIdentifier<
+                                'tree,
+                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
+                        )
+                    })
+                }
+                _ => Err(::type_sitter::IncorrectKind::new::<Self>(node)),
+            }
+        }
+        #[inline]
+        fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::LParen(x) => ::type_sitter::Node::raw(x),
+                Self::RParen(x) => ::type_sitter::Node::raw(x),
+                Self::TypeAnnotation(x) => ::type_sitter::Node::raw(x),
+                Self::TypeIdentifier(x) => ::type_sitter::Node::raw(x),
+            }
+        }
+        #[inline]
+        fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::LParen(x) => ::type_sitter::Node::raw_mut(x),
+                Self::RParen(x) => ::type_sitter::Node::raw_mut(x),
+                Self::TypeAnnotation(x) => ::type_sitter::Node::raw_mut(x),
+                Self::TypeIdentifier(x) => ::type_sitter::Node::raw_mut(x),
+            }
+        }
+        #[inline]
+        fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
+            match self {
+                Self::LParen(x) => x.into_raw(),
+                Self::RParen(x) => x.into_raw(),
+                Self::TypeAnnotation(x) => x.into_raw(),
+                Self::TypeIdentifier(x) => x.into_raw(),
+            }
+        }
+    }
     /**One of `{list_items | range}`:
 - [`ListItems`]
 - [`Range`]*/
@@ -6026,81 +5538,35 @@ This child has type `identifier` ([`Identifier`])*/
             }
         }
     }
-    /**One of `{!= | < | <= | == | > | >=}`:
-- [`symbols::NotEq`]
-- [`symbols::Lt`]
-- [`symbols::LtEq`]
-- [`symbols::EqEq`]
-- [`symbols::Gt`]
-- [`symbols::GtEq`]*/
+    /**One of `{match_stmt | query_definition}`:
+- [`MatchStmt`]
+- [`QueryDefinition`]*/
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     #[allow(non_camel_case_types)]
-    pub enum NotEq_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        NotEq(symbols::NotEq<'tree>),
-        Lt(symbols::Lt<'tree>),
-        LtEq(symbols::LtEq<'tree>),
-        EqEq(symbols::EqEq<'tree>),
-        Gt(symbols::Gt<'tree>),
-        GtEq(symbols::GtEq<'tree>),
+    pub enum MatchStmt_QueryDefinition<'tree> {
+        MatchStmt(MatchStmt<'tree>),
+        QueryDefinition(QueryDefinition<'tree>),
     }
     #[automatically_derived]
     #[allow(unused)]
-    impl<'tree> NotEq_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        ///Returns the node if it is of type `!=` ([`symbols::NotEq`]), otherwise returns `None`
+    impl<'tree> MatchStmt_QueryDefinition<'tree> {
+        ///Returns the node if it is of type `match_stmt` ([`MatchStmt`]), otherwise returns `None`
         #[inline]
-        pub fn as_not_eq(self) -> ::std::option::Option<symbols::NotEq<'tree>> {
+        pub fn as_match_stmt(self) -> ::std::option::Option<MatchStmt<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::NotEq(x) = self {
+            if let Self::MatchStmt(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
             }
         }
-        ///Returns the node if it is of type `<` ([`symbols::Lt`]), otherwise returns `None`
+        ///Returns the node if it is of type `query_definition` ([`QueryDefinition`]), otherwise returns `None`
         #[inline]
-        pub fn as_lt(self) -> ::std::option::Option<symbols::Lt<'tree>> {
+        pub fn as_query_definition(
+            self,
+        ) -> ::std::option::Option<QueryDefinition<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::Lt(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `<=` ([`symbols::LtEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_lt_eq(self) -> ::std::option::Option<symbols::LtEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::LtEq(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `==` ([`symbols::EqEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_eq_eq(self) -> ::std::option::Option<symbols::EqEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::EqEq(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `>` ([`symbols::Gt`]), otherwise returns `None`
-        #[inline]
-        pub fn as_gt(self) -> ::std::option::Option<symbols::Gt<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Gt(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `>=` ([`symbols::GtEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_gt_eq(self) -> ::std::option::Option<symbols::GtEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::GtEq(x) = self {
+            if let Self::QueryDefinition(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
@@ -6108,63 +5574,27 @@ This child has type `identifier` ([`Identifier`])*/
         }
     }
     #[automatically_derived]
-    impl<'tree> ::type_sitter::Node<'tree> for NotEq_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        type WithLifetime<'a> = NotEq_Lt_LtEq_EqEq_Gt_GtEq<'a>;
-        const KIND: &'static str = "{!= | < | <= | == | > | >=}";
+    impl<'tree> ::type_sitter::Node<'tree> for MatchStmt_QueryDefinition<'tree> {
+        type WithLifetime<'a> = MatchStmt_QueryDefinition<'a>;
+        const KIND: &'static str = "{match_stmt | query_definition}";
         #[inline]
         fn try_from_raw(
             node: ::type_sitter::raw::Node<'tree>,
         ) -> ::type_sitter::NodeResult<'tree, Self> {
             match node.kind() {
-                "!=" => {
+                "match_stmt" => {
                     Ok(unsafe {
-                        Self::NotEq(
-                            <symbols::NotEq<
+                        Self::MatchStmt(
+                            <MatchStmt<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
                     })
                 }
-                "<" => {
+                "query_definition" => {
                     Ok(unsafe {
-                        Self::Lt(
-                            <symbols::Lt<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "<=" => {
-                    Ok(unsafe {
-                        Self::LtEq(
-                            <symbols::LtEq<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "==" => {
-                    Ok(unsafe {
-                        Self::EqEq(
-                            <symbols::EqEq<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                ">" => {
-                    Ok(unsafe {
-                        Self::Gt(
-                            <symbols::Gt<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                ">=" => {
-                    Ok(unsafe {
-                        Self::GtEq(
-                            <symbols::GtEq<
+                        Self::QueryDefinition(
+                            <QueryDefinition<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
@@ -6176,160 +5606,78 @@ This child has type `identifier` ([`Identifier`])*/
         #[inline]
         fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => ::type_sitter::Node::raw(x),
-                Self::Lt(x) => ::type_sitter::Node::raw(x),
-                Self::LtEq(x) => ::type_sitter::Node::raw(x),
-                Self::EqEq(x) => ::type_sitter::Node::raw(x),
-                Self::Gt(x) => ::type_sitter::Node::raw(x),
-                Self::GtEq(x) => ::type_sitter::Node::raw(x),
+                Self::MatchStmt(x) => ::type_sitter::Node::raw(x),
+                Self::QueryDefinition(x) => ::type_sitter::Node::raw(x),
             }
         }
         #[inline]
         fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Lt(x) => ::type_sitter::Node::raw_mut(x),
-                Self::LtEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::EqEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Gt(x) => ::type_sitter::Node::raw_mut(x),
-                Self::GtEq(x) => ::type_sitter::Node::raw_mut(x),
+                Self::MatchStmt(x) => ::type_sitter::Node::raw_mut(x),
+                Self::QueryDefinition(x) => ::type_sitter::Node::raw_mut(x),
             }
         }
         #[inline]
         fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => x.into_raw(),
-                Self::Lt(x) => x.into_raw(),
-                Self::LtEq(x) => x.into_raw(),
-                Self::EqEq(x) => x.into_raw(),
-                Self::Gt(x) => x.into_raw(),
-                Self::GtEq(x) => x.into_raw(),
+                Self::MatchStmt(x) => x.into_raw(),
+                Self::QueryDefinition(x) => x.into_raw(),
             }
         }
     }
-    /**One of `{!= | * | + | - | / | < | <= | == | > | >=}`:
-- [`symbols::NotEq`]
-- [`symbols::Mul`]
-- [`symbols::Add`]
-- [`symbols::Sub`]
-- [`symbols::Div`]
-- [`symbols::Lt`]
-- [`symbols::LtEq`]
-- [`symbols::EqEq`]
-- [`symbols::Gt`]
-- [`symbols::GtEq`]*/
+    /**One of `{refinement | type_annotation | type_application | type_identifier}`:
+- [`Refinement`]
+- [`TypeAnnotation`]
+- [`TypeApplication`]
+- [`TypeIdentifier`]*/
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     #[allow(non_camel_case_types)]
-    pub enum NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        NotEq(symbols::NotEq<'tree>),
-        Mul(symbols::Mul<'tree>),
-        Add(symbols::Add<'tree>),
-        Sub(symbols::Sub<'tree>),
-        Div(symbols::Div<'tree>),
-        Lt(symbols::Lt<'tree>),
-        LtEq(symbols::LtEq<'tree>),
-        EqEq(symbols::EqEq<'tree>),
-        Gt(symbols::Gt<'tree>),
-        GtEq(symbols::GtEq<'tree>),
+    pub enum Refinement_TypeAnnotation_TypeApplication_TypeIdentifier<'tree> {
+        Refinement(Refinement<'tree>),
+        TypeAnnotation(TypeAnnotation<'tree>),
+        TypeApplication(TypeApplication<'tree>),
+        TypeIdentifier(TypeIdentifier<'tree>),
     }
     #[automatically_derived]
     #[allow(unused)]
-    impl<'tree> NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        ///Returns the node if it is of type `!=` ([`symbols::NotEq`]), otherwise returns `None`
+    impl<'tree> Refinement_TypeAnnotation_TypeApplication_TypeIdentifier<'tree> {
+        ///Returns the node if it is of type `refinement` ([`Refinement`]), otherwise returns `None`
         #[inline]
-        pub fn as_not_eq(self) -> ::std::option::Option<symbols::NotEq<'tree>> {
+        pub fn as_refinement(self) -> ::std::option::Option<Refinement<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::NotEq(x) = self {
+            if let Self::Refinement(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
             }
         }
-        ///Returns the node if it is of type `*` ([`symbols::Mul`]), otherwise returns `None`
+        ///Returns the node if it is of type `type_annotation` ([`TypeAnnotation`]), otherwise returns `None`
         #[inline]
-        pub fn as_mul(self) -> ::std::option::Option<symbols::Mul<'tree>> {
+        pub fn as_type_annotation(self) -> ::std::option::Option<TypeAnnotation<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::Mul(x) = self {
+            if let Self::TypeAnnotation(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
             }
         }
-        ///Returns the node if it is of type `+` ([`symbols::Add`]), otherwise returns `None`
+        ///Returns the node if it is of type `type_application` ([`TypeApplication`]), otherwise returns `None`
         #[inline]
-        pub fn as_add(self) -> ::std::option::Option<symbols::Add<'tree>> {
+        pub fn as_type_application(
+            self,
+        ) -> ::std::option::Option<TypeApplication<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::Add(x) = self {
+            if let Self::TypeApplication(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
             }
         }
-        ///Returns the node if it is of type `-` ([`symbols::Sub`]), otherwise returns `None`
+        ///Returns the node if it is of type `type_identifier` ([`TypeIdentifier`]), otherwise returns `None`
         #[inline]
-        pub fn as_sub(self) -> ::std::option::Option<symbols::Sub<'tree>> {
+        pub fn as_type_identifier(self) -> ::std::option::Option<TypeIdentifier<'tree>> {
             #[allow(irrefutable_let_patterns)]
-            if let Self::Sub(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `/` ([`symbols::Div`]), otherwise returns `None`
-        #[inline]
-        pub fn as_div(self) -> ::std::option::Option<symbols::Div<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Div(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `<` ([`symbols::Lt`]), otherwise returns `None`
-        #[inline]
-        pub fn as_lt(self) -> ::std::option::Option<symbols::Lt<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Lt(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `<=` ([`symbols::LtEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_lt_eq(self) -> ::std::option::Option<symbols::LtEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::LtEq(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `==` ([`symbols::EqEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_eq_eq(self) -> ::std::option::Option<symbols::EqEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::EqEq(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `>` ([`symbols::Gt`]), otherwise returns `None`
-        #[inline]
-        pub fn as_gt(self) -> ::std::option::Option<symbols::Gt<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::Gt(x) = self {
-                ::std::option::Option::Some(x)
-            } else {
-                ::std::option::Option::None
-            }
-        }
-        ///Returns the node if it is of type `>=` ([`symbols::GtEq`]), otherwise returns `None`
-        #[inline]
-        pub fn as_gt_eq(self) -> ::std::option::Option<symbols::GtEq<'tree>> {
-            #[allow(irrefutable_let_patterns)]
-            if let Self::GtEq(x) = self {
+            if let Self::TypeIdentifier(x) = self {
                 ::std::option::Option::Some(x)
             } else {
                 ::std::option::Option::None
@@ -6338,99 +5686,47 @@ This child has type `identifier` ([`Identifier`])*/
     }
     #[automatically_derived]
     impl<'tree> ::type_sitter::Node<'tree>
-    for NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<'tree> {
-        type WithLifetime<'a> = NotEq_Mul_Add_Sub_Div_Lt_LtEq_EqEq_Gt_GtEq<'a>;
-        const KIND: &'static str = "{!= | * | + | - | / | < | <= | == | > | >=}";
+    for Refinement_TypeAnnotation_TypeApplication_TypeIdentifier<'tree> {
+        type WithLifetime<'a> = Refinement_TypeAnnotation_TypeApplication_TypeIdentifier<
+            'a,
+        >;
+        const KIND: &'static str = "{refinement | type_annotation | type_application | type_identifier}";
         #[inline]
         fn try_from_raw(
             node: ::type_sitter::raw::Node<'tree>,
         ) -> ::type_sitter::NodeResult<'tree, Self> {
             match node.kind() {
-                "!=" => {
+                "refinement" => {
                     Ok(unsafe {
-                        Self::NotEq(
-                            <symbols::NotEq<
+                        Self::Refinement(
+                            <Refinement<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
                     })
                 }
-                "*" => {
+                "type_annotation" => {
                     Ok(unsafe {
-                        Self::Mul(
-                            <symbols::Mul<
+                        Self::TypeAnnotation(
+                            <TypeAnnotation<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
                     })
                 }
-                "+" => {
+                "type_application" => {
                     Ok(unsafe {
-                        Self::Add(
-                            <symbols::Add<
+                        Self::TypeApplication(
+                            <TypeApplication<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
                     })
                 }
-                "-" => {
+                "type_identifier" => {
                     Ok(unsafe {
-                        Self::Sub(
-                            <symbols::Sub<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "/" => {
-                    Ok(unsafe {
-                        Self::Div(
-                            <symbols::Div<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "<" => {
-                    Ok(unsafe {
-                        Self::Lt(
-                            <symbols::Lt<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "<=" => {
-                    Ok(unsafe {
-                        Self::LtEq(
-                            <symbols::LtEq<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                "==" => {
-                    Ok(unsafe {
-                        Self::EqEq(
-                            <symbols::EqEq<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                ">" => {
-                    Ok(unsafe {
-                        Self::Gt(
-                            <symbols::Gt<
-                                'tree,
-                            > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
-                        )
-                    })
-                }
-                ">=" => {
-                    Ok(unsafe {
-                        Self::GtEq(
-                            <symbols::GtEq<
+                        Self::TypeIdentifier(
+                            <TypeIdentifier<
                                 'tree,
                             > as ::type_sitter::Node<'tree>>::from_raw_unchecked(node),
                         )
@@ -6442,46 +5738,28 @@ This child has type `identifier` ([`Identifier`])*/
         #[inline]
         fn raw(&self) -> &::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => ::type_sitter::Node::raw(x),
-                Self::Mul(x) => ::type_sitter::Node::raw(x),
-                Self::Add(x) => ::type_sitter::Node::raw(x),
-                Self::Sub(x) => ::type_sitter::Node::raw(x),
-                Self::Div(x) => ::type_sitter::Node::raw(x),
-                Self::Lt(x) => ::type_sitter::Node::raw(x),
-                Self::LtEq(x) => ::type_sitter::Node::raw(x),
-                Self::EqEq(x) => ::type_sitter::Node::raw(x),
-                Self::Gt(x) => ::type_sitter::Node::raw(x),
-                Self::GtEq(x) => ::type_sitter::Node::raw(x),
+                Self::Refinement(x) => ::type_sitter::Node::raw(x),
+                Self::TypeAnnotation(x) => ::type_sitter::Node::raw(x),
+                Self::TypeApplication(x) => ::type_sitter::Node::raw(x),
+                Self::TypeIdentifier(x) => ::type_sitter::Node::raw(x),
             }
         }
         #[inline]
         fn raw_mut(&mut self) -> &mut ::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Mul(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Add(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Sub(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Div(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Lt(x) => ::type_sitter::Node::raw_mut(x),
-                Self::LtEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::EqEq(x) => ::type_sitter::Node::raw_mut(x),
-                Self::Gt(x) => ::type_sitter::Node::raw_mut(x),
-                Self::GtEq(x) => ::type_sitter::Node::raw_mut(x),
+                Self::Refinement(x) => ::type_sitter::Node::raw_mut(x),
+                Self::TypeAnnotation(x) => ::type_sitter::Node::raw_mut(x),
+                Self::TypeApplication(x) => ::type_sitter::Node::raw_mut(x),
+                Self::TypeIdentifier(x) => ::type_sitter::Node::raw_mut(x),
             }
         }
         #[inline]
         fn into_raw(self) -> ::type_sitter::raw::Node<'tree> {
             match self {
-                Self::NotEq(x) => x.into_raw(),
-                Self::Mul(x) => x.into_raw(),
-                Self::Add(x) => x.into_raw(),
-                Self::Sub(x) => x.into_raw(),
-                Self::Div(x) => x.into_raw(),
-                Self::Lt(x) => x.into_raw(),
-                Self::LtEq(x) => x.into_raw(),
-                Self::EqEq(x) => x.into_raw(),
-                Self::Gt(x) => x.into_raw(),
-                Self::GtEq(x) => x.into_raw(),
+                Self::Refinement(x) => x.into_raw(),
+                Self::TypeAnnotation(x) => x.into_raw(),
+                Self::TypeApplication(x) => x.into_raw(),
+                Self::TypeIdentifier(x) => x.into_raw(),
             }
         }
     }

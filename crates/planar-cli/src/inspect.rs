@@ -56,6 +56,19 @@ pub fn run(path: PathBuf) -> Result<()> {
     }
 
 
+    println!("\n{}", style("Grammars:").underlined().yellow());
+    if program.grammars.is_empty() {
+        println!("  {}", style("No grammars defined").dim());
+    } else {
+        for (name, metadata) in program.grammars.iter() {
+            println!(
+                "  {} (version: {})", 
+                style(name).green().bold(), 
+                style(&metadata.version).cyan()
+            );
+        }
+    }
+
     println!("\n{}", style("Modules Structure:").underlined().yellow());
     for (mod_name, module) in program.modules.iter() {
         println!("  {} ", style(mod_name).bold().green());
@@ -75,6 +88,16 @@ pub fn run(path: PathBuf) -> Result<()> {
                 ty.value.id.0
             );
         }
+        for externs in module.externs.iter() {
+            for func in externs.value.functions.iter() {
+                println!("    {} {} (id: {})", 
+                    style("function").cyan(), 
+                    func.value.name, 
+                    func.value.id.0
+                );
+            }
+        }
+
     }
 
     Ok(())

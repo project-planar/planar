@@ -28,8 +28,8 @@ Planar acts as a "Linker" for infrastructure:
 
 ### Phase 1: Foundation (The Language)
 - [ ] **PlanarDL** Parser & Runtime: Defining schemas and extraction rules.
-- [ ] Project Manifest (`planar.kdl`): Discovery rules and target definitions.
-- [ ] Package System: Loading rules and plugins from external registries/git.
+- [*] Project Manifest (`planar.kdl`): Discovery rules and target definitions.
+- [*] Package System: Loading rules and plugins from external registries/git.
 
 ### Phase 2: Semantic Intelligence (The Heart)
 - [ ] **Kuzu Integration**: Implementing an embedded graph database to store and query repo-wide knowledge.

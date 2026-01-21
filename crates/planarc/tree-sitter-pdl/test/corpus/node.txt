@@ -21,78 +21,113 @@ node Service2 {}
 
 (source_file
   (node_definition
-    kind: (fqmn)
+    kind: (fqmn
+      (identifier))
     (block))
   (node_definition
-    kind: (fqmn)
+    kind: (fqmn
+      (identifier))
     (block)))
 
 ==================
 Match Statement
 ==================
 node Test {
-  match `(key) @k` {}
+  query test: grammars.unknown = `(key) @k`
+  match test {}
 }
 
 ---
 
 (source_file
   (node_definition
-    kind: (fqmn)
+    kind: (fqmn
+      (identifier))
     (block
+      (query_definition
+        name: (identifier)
+        grammar: (fqmn
+          (identifier)
+          (identifier))
+        value: (query_literal
+          content: (raw_content)))
       (match_stmt
-        query: (raw_string)
+        query: (identifier)
         (match_block)))))
 
 ==================
 Extern Declaration
 ==================
 
-extern std.lint {
-  isPascalCase :: name: String -> Diagnostic?
+#builtin
+extern {
+  isPascalCase  name: builtin.str -> Diagnostic?
 
-  validateGrammarName :: name: String -> Diagnostic?
+  validateGrammarName  name: String -> Diagnostic?
 
-  operator / :: left: String, right: String -> String
+  operator /  left: String, right: String -> String
 }
 
 ---
 
 (source_file
   (extern_definition
-    (fqmn)
+    (attribute
+      (identifier))
     (extern_block
       (extern_def_fn
         (identifier)
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)
+                (identifier)))))
         (extern_return
-          (identifier)))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier))))))
       (extern_def_fn
         (identifier)
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))
         (extern_return
-          (identifier)))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier))))))
       (extern_def_fn
         (operator_identifier)
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))
         (extern_return
-          (identifier))))))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))))))
 
 ==================
 Extern Declaration Core
 ==================
 
-extern core {
-  operator / :: left: String, right: String -> String
+extern {
+  operator /  left: String, right: String -> String
 }
 
 
@@ -100,18 +135,26 @@ extern core {
 
 (source_file
   (extern_definition
-    (fqmn)
     (extern_block
       (extern_def_fn
         (operator_identifier)
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))
         (extern_def_arg
           (identifier)
-          (identifier))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))
         (extern_return
-          (identifier))))))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))))))))
 
 ==================
 Import Declaration
@@ -123,13 +166,15 @@ import std.lint
 
 (source_file
   (import_definition
-    (fqmn)))
+    (fqmn
+      (identifier)
+      (identifier))))
 
 ==================
 Query Declaration
 ==================
 
-query QueryDefPattern = `
+query QueryDefPattern: grammars.unknown = `
     (query_definition
         name: (identifier) @query_name
         value: (query_literal
@@ -143,6 +188,9 @@ query QueryDefPattern = `
 (source_file
   (query_definition
     (identifier)
+    (fqmn
+      (identifier)
+      (identifier))
     (query_literal
       (raw_content))))
 
@@ -150,14 +198,12 @@ query QueryDefPattern = `
 Nginx hello world
 ==================
 
-schema "nginx" grammar="nginx"
-
 import std.fs 
 
-query IncludePattern = `include (string)@path;`
+query includePattern: grammars.nginx = `include (string)@path;`
 
 node IncludeDirective {
-  match IncludePattern {
+  match includePattern {
     @path {
       global -> std.fs.resolve_glob $CURRENT_FILE @path.text
     }
@@ -167,17 +213,20 @@ node IncludeDirective {
 ---
 
 (source_file
-  (header
-    (string)
-    (string))
   (import_definition
-    (fqmn))
+    (fqmn
+      (identifier)
+      (identifier)))
   (query_definition
     (identifier)
+    (fqmn
+      (identifier)
+      (identifier))
     (query_literal
       (raw_content)))
   (node_definition
-    (fqmn)
+    (fqmn
+      (identifier))
     (block
       (match_stmt
         (identifier)
@@ -190,7 +239,10 @@ node IncludeDirective {
                   (identifier))
                 (graph_right_statements
                   (call_func
-                    (fqmn)
+                    (fqmn
+                      (identifier)
+                      (identifier)
+                      (identifier))
                     (variable)
                     (variable
                       (property_access))))))))))))
@@ -201,11 +253,11 @@ Fact Declaration
 
 fact Node {  
   #auto_id
-  file_path: String(p) | std.fs.is_path(p)
+  file_path: String where std.fs.is_path it
   text: String
-  start_byte: Int | in [0..]
-  end_byte: Int | in [start_byte..]
-  tags: List<String | in ["sale", "new", "deprecated"]> 
+  start_byte: Int where it in [0..]
+  end_byte: Int where it in [start_byte..]
+  tags: List (String where it in ["sale", "new", "deprecated"])
 }
 ---
 
@@ -218,49 +270,56 @@ fact Node {
       (identifier)
       (type_annotation
         (type_identifier
-          (fqmn))
-        (identifier))
-      (refinement
-        (call_expression
-          (dotted_identifier
+          (fqmn
+            (identifier)))
+        (refinement
+          (fqmn
             (identifier)
             (identifier)
             (identifier))
-          (identifier))))
+          (it))))
     (fact_field_definition
       (identifier)
       (type_annotation
         (type_identifier
-          (fqmn))))
-    (fact_field_definition
-      (identifier)
-      (type_annotation
-        (type_identifier
-          (fqmn)))
-      (refinement
-        (in_expression
-          (range
-            (number)))))
-    (fact_field_definition
-      (identifier)
-      (type_annotation
-        (type_identifier
-          (fqmn)))
-      (refinement
-        (in_expression
-          (range
+          (fqmn
             (identifier)))))
     (fact_field_definition
       (identifier)
       (type_annotation
         (type_identifier
-          (fqmn))
-        (type_arguments
-          (type_argument
-            (type_annotation
-              (type_identifier
-                (fqmn)))
+          (fqmn
+            (identifier)))
+        (refinement
+          (it)
+          (in_expression
+            (range
+              (number))))))
+    (fact_field_definition
+      (identifier)
+      (type_annotation
+        (type_identifier
+          (fqmn
+            (identifier)))
+        (refinement
+          (it)
+          (in_expression
+            (range
+              (fqmn
+                (identifier)))))))
+    (fact_field_definition
+      (identifier)
+      (type_annotation
+        (type_application
+          (type_identifier
+            (fqmn
+              (identifier)))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))
             (refinement
+              (it)
               (in_expression
                 (list_items
                   (string)
@@ -271,20 +330,100 @@ fact Node {
 Type Declaration
 ==================
 
-type ParsableInt = String(x) | std.is_int(x)
-type ListPositiveInt = List<i64 | x > 0>
+type ParsableInt = String where std.is_int it
+type ListPositiveInt = List (i64 where it > 0)
+type Something = i64 where std.math.is_positive (std.math.add it 10)
+#wit-compatible
+#export
+type A = { x: Int y: { z: ParsableInt w: List (i64 where it > 0) } }
+
 ---
 
 (source_file
   (type_declaration
     (identifier)
-    (type_annotation
-      (type_identifier
-        (fqmn))
+    (type_definition
+      (type_annotation
+        (type_identifier
+          (fqmn
+            (identifier)))
+        (refinement
+          (fqmn
+            (identifier)
+            (identifier))
+          (it)))))
+  (type_declaration
+    (identifier)
+    (type_definition
+      (type_annotation
+        (type_application
+          (type_identifier
+            (fqmn
+              (identifier)))
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier)))
+            (refinement
+              (it)
+              (operator_identifier)
+              (number)))))))
+  (type_declaration
+    (identifier)
+    (type_definition
+      (type_annotation
+        (type_identifier
+          (fqmn
+            (identifier)))
+        (refinement
+          (fqmn
+            (identifier)
+            (identifier)
+            (identifier))
+          (parenthesized_expression
+            (fqmn
+              (identifier)
+              (identifier)
+              (identifier))
+            (it)
+            (number))))))
+  (type_declaration
+    (attribute
       (identifier))
-    (refinement
-      (call_expression
-        (dotted_identifier
-          (identifier)
-          (identifier))
-        (identifier)))))
+    (attribute
+      (identifier))
+    (identifier)
+    (type_definition
+      (type_field_definition
+        (identifier)
+        (type_definition
+          (type_annotation
+            (type_identifier
+              (fqmn
+                (identifier))))))
+      (type_field_definition
+        (identifier)
+        (type_definition
+          (type_field_definition
+            (identifier)
+            (type_definition
+              (type_annotation
+                (type_identifier
+                  (fqmn
+                    (identifier))))))
+          (type_field_definition
+            (identifier)
+            (type_definition
+              (type_annotation
+                (type_application
+                  (type_identifier
+                    (fqmn
+                      (identifier)))
+                  (type_annotation
+                    (type_identifier
+                      (fqmn
+                        (identifier)))
+                    (refinement
+                      (it)
+                      (operator_identifier)
+                      (number))))))))))))

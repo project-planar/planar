@@ -154,7 +154,8 @@ impl KuzuSchemaBuilder {
                         span: ty.name.loc.into(),
                     });
                 }
-                let inner = &ty.args[0].value.ty;
+
+                let inner = &ty.args[0].value;
                 let inner_kuzu = Self::map_type(inner)?;
                 Ok(format!("{}[]", inner_kuzu))
             }
@@ -197,25 +198,21 @@ mod tests {
         TypeAnnotation {
             name: s(name),
             args: vec![],
-            generic_var: None,
+            refinement: None
         }
     }
 
     fn ty_list(inner: TypeAnnotation) -> TypeAnnotation {
         TypeAnnotation {
             name: s("List"),
-            args: vec![sp(TypeArgument {
-                ty: inner,
-                refinement: None,
-            })],
-            generic_var: None,
+            args: vec![sp(inner)],
+            refinement: None
         }
     }
 
     fn attr(name: &str) -> Spanned<Attribute> {
         sp(Attribute {
             name: s(name),
-            args: vec![],
         })
     }
 
@@ -351,16 +348,10 @@ mod tests {
         let invalid_list_ty = TypeAnnotation {
             name: s("List"),
             args: vec![
-                sp(TypeArgument {
-                    ty: ty_simple("String"),
-                    refinement: None,
-                }),
-                sp(TypeArgument {
-                    ty: ty_simple("Int"),
-                    refinement: None,
-                }),
+                sp(ty_simple("String")),
+                sp(ty_simple("Int")),
             ],
-            generic_var: None,
+            refinement: None
         };
 
         let f = fact(

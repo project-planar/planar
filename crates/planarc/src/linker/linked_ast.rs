@@ -11,7 +11,41 @@ pub struct LinkedModule {
     pub file_id: FileId,
     pub facts: Vec<Spanned<LinkedFact>>,
     pub types: Vec<Spanned<LinkedType>>,
+    pub externs: Vec<Spanned<LinkedExternDefinition>>,
+    pub queries: Vec<Spanned<LinkedQuery>>,
 }
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedQuery {
+    pub id: SymbolId,
+    pub name: String,
+    pub grammar: String,
+    pub query: String,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedExternDefinition {
+    pub functions: Vec<Spanned<LinkedExternFunction>>,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedExternFunction {
+    pub id: SymbolId,
+    pub name: String,
+    pub args: Vec<Spanned<LinkedExternArgument>>,
+    pub return_ty: Option<LinkedTypeReference>,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedExternArgument {
+    pub name: String,
+    pub ty: LinkedTypeReference,
+}
+
 
 #[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
 #[rkyv(derive(Debug))]
@@ -27,32 +61,8 @@ pub struct LinkedFact {
 pub struct LinkedType {
     pub id: SymbolId,
     pub name: String,
-    pub ty: LinkedTypeReference,
-    pub refinement: Option<Spanned<LinkedExpression>>,
-}
-
-#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
-pub struct LinkedField {
     pub attributes: Vec<Spanned<LinkedAttribute>>,
-    pub name: String,
-    pub ty: LinkedTypeReference,
-    pub refinement: Option<Spanned<LinkedExpression>>,
-}
-
-#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
-pub struct LinkedAttribute {
-    pub name: Spanned<ResolvedId>,
-    pub args: Vec<Spanned<LinkedExpression>>,
-}
-
-#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
-pub struct LinkedTypeReference {
-    pub symbol: Spanned<ResolvedId>,
-    pub args: Vec<Spanned<LinkedTypeArgument>>,
-    pub generic_var: Option<String>,
+    pub definition: Spanned<LinkedTypeDefinition>,
 }
 
 #[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
@@ -71,9 +81,68 @@ pub struct LinkedTypeReference {
         <__C as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
     ))
 )]
-pub struct LinkedTypeArgument {
+pub struct LinkedTypeDefinition {
+    pub base_type: Option<LinkedTypeReference>,
     #[rkyv(omit_bounds)]
+    pub fields: Vec<Spanned<LinkedTypeField>>,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+#[rkyv(
+    serialize_bounds(
+        __S: rkyv::ser::Writer + rkyv::ser::Allocator + rkyv::rancor::Fallible,
+        <__S as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ),
+    deserialize_bounds(
+        __D: rkyv::rancor::Fallible,
+        <__D as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ),
+    bytecheck(bounds(
+        __C: rkyv::validation::ArchiveContext,
+        <__C as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ))
+)]
+pub struct LinkedTypeField {
+    pub name: String,
+    pub definition: LinkedTypeDefinition,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedField {
+    pub attributes: Vec<Spanned<LinkedAttribute>>,
+    pub name: String,
     pub ty: LinkedTypeReference,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+pub struct LinkedAttribute {
+    pub name: Spanned<String>,
+    pub args: Vec<Spanned<LinkedExpression>>,
+}
+
+#[derive(Debug, Clone, Archive, Serialize, Deserialize, PartialEq, Eq)]
+#[rkyv(derive(Debug))]
+#[rkyv(
+    serialize_bounds(
+        __S: rkyv::ser::Writer + rkyv::ser::Allocator + rkyv::rancor::Fallible,
+        <__S as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ),
+    deserialize_bounds(
+        __D: rkyv::rancor::Fallible,
+        <__D as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ),
+    bytecheck(bounds(
+        __C: rkyv::validation::ArchiveContext,
+        <__C as rkyv::rancor::Fallible>::Error: rkyv::rancor::Source,
+    ))
+)]
+pub struct LinkedTypeReference {
+    pub symbol: Spanned<ResolvedId>,
+    #[rkyv(omit_bounds)]
+    pub args: Vec<Spanned<LinkedTypeReference>>,
     pub refinement: Option<Spanned<LinkedExpression>>,
 }
 
@@ -101,13 +170,20 @@ pub enum LinkedExpression {
     Binary {
         #[rkyv(omit_bounds)]
         left: Box<Spanned<LinkedExpression>>,
-        op: String,
+        operator: Spanned<ResolvedId>, 
+        #[rkyv(omit_bounds)]
+        right: Box<Spanned<LinkedExpression>>,
+    },
+
+    PartialComparison {
+        operator: Spanned<ResolvedId>,
         #[rkyv(omit_bounds)]
         right: Box<Spanned<LinkedExpression>>,
     },
 
     Call {
-        symbol: Spanned<ResolvedId>,
+        #[rkyv(omit_bounds)]
+        function: Box<Spanned<LinkedExpression>>,
         #[rkyv(omit_bounds)]
         args: Vec<Spanned<LinkedExpression>>,
     },
@@ -120,9 +196,5 @@ pub enum LinkedExpression {
         end: Option<Box<Spanned<LinkedExpression>>>,
     },
 
-    PartialComparison {
-        op: String,
-        #[rkyv(omit_bounds)]
-        right: Box<Spanned<LinkedExpression>>,
-    },
+
 }

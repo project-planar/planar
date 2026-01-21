@@ -15,10 +15,10 @@ thiserror = { workspace = true }
 rayon = { workspace = true }
 tracing = { workspace = true }
 derive_more = { workspace = true }
+tree-sitter-planardl = { workspace = true }
 rkyv = { version = "0.8.14", features = ["bytecheck", "std"]}
 xxhash-rust = { version = "0.8", features = ["xxh64"] }
 libloading = "0.9.0"
-tree-sitter-planardl = { path = "tree-sitter-pdl/" }
 type-sitter = "0.8.1"
 type-sitter-lib = "0.8.1"
 matchit = "0.9.1"

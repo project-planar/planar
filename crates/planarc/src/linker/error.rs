@@ -2,6 +2,8 @@ use miette::{Diagnostic, NamedSource, SourceSpan};
 use std::fmt;
 use thiserror::Error;
 
+use crate::{compiler::error::ErrorWithLocation, spanned::Location};
+
 #[derive(Clone, Debug, Error, Diagnostic)]
 pub enum LinkerError {
     #[error("Symbol collision: '{name}' is already defined")]
@@ -17,6 +19,7 @@ pub enum LinkerError {
 
         #[related]
         related: Vec<PreviousDefinition>,
+        loc: Location,
     },
 
     #[error("Unknown symbol: '{name}'")]
@@ -29,6 +32,7 @@ pub enum LinkerError {
 
         #[label("undeclared identifier")]
         span: SourceSpan,
+        loc: Location,
     },
 
     #[error("Ambiguous reference: '{name}' could refer to multiple symbols")]
@@ -44,6 +48,7 @@ pub enum LinkerError {
 
         #[related]
         candidates: Vec<AmbiguousCandidate>,
+        loc: Location,
     },
 }
 
@@ -57,6 +62,7 @@ pub struct AmbiguousCandidate {
 
     #[label("defined here")]
     pub span: SourceSpan,
+    pub loc: Location,
 }
 
 #[derive(Clone, Debug, Error, Diagnostic)]
@@ -67,11 +73,23 @@ pub struct PreviousDefinition {
 
     #[label("original definition")]
     pub span: SourceSpan,
+    pub loc: Location,
 }
 
 #[derive(Clone, Error, Diagnostic)]
 #[error("Found {} linker errors", .0.len())]
 pub struct LinkerErrors(#[related] pub Vec<LinkerError>);
+
+
+impl ErrorWithLocation for LinkerError {
+    fn location(&self) -> Location {
+        match self {
+            LinkerError::SymbolCollision { loc, .. } => *loc,
+            LinkerError::UnknownSymbol { loc, .. } => *loc,
+            LinkerError::AmbiguousReference { loc, .. } => *loc,
+        }
+    }
+}
 
 impl LinkerErrors {
 
@@ -109,6 +127,7 @@ pub enum GraphError {
         span: SourceSpan,
         import: String,
         module: String,
+        loc: Location,
     },
 
     #[error("Circular dependency detected involving '{root_module}'")]
@@ -141,6 +160,7 @@ pub struct CycleStep {
     pub src: NamedSource<String>,
     #[label("imports '{target}' here")]
     pub span: SourceSpan,
+    pub loc: Location,
     pub module: String,
     pub target: String,
 }

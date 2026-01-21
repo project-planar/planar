@@ -1,8 +1,8 @@
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use thiserror::Error;
-use type_sitter::Node;
+use type_sitter::{Node, UntypedNode};
 use std::fmt;
-use crate::module_loader::Source;
+use crate::{compiler::error::{DiagnosticWithLocation, ErrorWithLocation}, lowering::ctx::Ctx, module_loader::Source, spanned::Location};
 
 #[derive(Clone, Debug, Error, Diagnostic)]
 pub enum LoweringError {
@@ -15,6 +15,8 @@ pub enum LoweringError {
         #[label("expected {expected}")]
         span: SourceSpan,
         
+        loc: Location,
+
         expected: String,
         found: String,
     },
@@ -24,18 +26,8 @@ pub enum LoweringError {
     SyntaxError {
         #[source_code]
         src: NamedSource<String>,
-
-        #[label("here")]
-        span: SourceSpan,
-
-        message: String,
-    },
-
-    #[error("{message}")]
-    #[diagnostic(code(pdl::lowering::custom))]
-    Custom {
-        #[source_code]
-        src: NamedSource<String>,
+        
+        loc: Location, 
 
         #[label("here")]
         span: SourceSpan,
@@ -50,6 +42,15 @@ pub struct LoweringErrors(
     #[related]
     pub Vec<LoweringError>
 );
+
+impl ErrorWithLocation for LoweringError {
+    fn location(&self) -> Location {
+        match &self {
+            LoweringError::UnexpectedKind { loc, .. } => loc.clone(),
+            LoweringError::SyntaxError { loc, .. } => loc.clone(),
+        }
+    }
+} 
 
 impl LoweringErrors {
     pub fn new(errors: Vec<LoweringError>) -> Self {
@@ -73,19 +74,20 @@ impl fmt::Debug for LoweringErrors {
 
 impl LoweringError {
     
-    pub fn from_incorrect_kind(err: type_sitter::IncorrectKind<'_>, source: &Source) -> Self {
+    pub fn from_incorrect_kind(err: type_sitter::IncorrectKind<'_>, source: &Source, ctx: &Ctx<'_>) -> Self {
         let node = err.node;
         let range = node.range();
         
         Self::UnexpectedKind {
             src: NamedSource::new(source.origin.clone(), source.content.clone()),
-            span: SourceSpan::new(range.start_byte.into(), (range.end_byte - range.start_byte).into()),
+            span: SourceSpan::new(range.start_byte.into(), range.end_byte - range.start_byte),
             expected: err.kind.to_string(),
             found: node.kind().to_string(),
+            loc: ctx.location(&node)
         }
     }
 
-    pub fn syntax_error(node: tree_sitter::Node, source: &Source) -> Self {
+    pub fn syntax_error(node: tree_sitter::Node, source: &Source, ctx: &Ctx<'_>) -> Self {
         let range = node.range();
         let bytes = source.content.as_bytes();
         let full_text = node.utf8_text(bytes).unwrap_or("");
@@ -108,16 +110,18 @@ impl LoweringError {
 
         Self::SyntaxError {
             src: NamedSource::new(source.origin.clone(), source.content.clone()),
-            span: SourceSpan::new(range.start_byte.into(), (range.end_byte - range.start_byte).into()),
+            span: SourceSpan::new(range.start_byte.into(), range.end_byte - range.start_byte),
             message,
+            loc: ctx.location(&UntypedNode::new(node))
         }
     }
 
     
-    pub fn collect_from_tree(root: tree_sitter::Node, source: &Source) -> Vec<Self> {
+    pub fn collect_from_tree(root: tree_sitter::Node, source: &Source, ctx: &Ctx<'_>) -> Vec<Self> {
+        
         let mut errors = Vec::new();
         let mut cursor = root.walk();
-        recursive_find_errors(&mut cursor, source, &mut errors);
+        recursive_find_errors(&mut cursor, source, &mut errors, ctx);
         errors
     }
 }
@@ -126,12 +130,13 @@ impl LoweringError {
 fn recursive_find_errors(
     cursor: &mut tree_sitter::TreeCursor, 
     source: &Source, 
-    errors: &mut Vec<LoweringError>
+    errors: &mut Vec<LoweringError>,
+    ctx: &Ctx<'_>
 ) {
     let node = cursor.node();
 
     if node.is_missing() {
-        errors.push(LoweringError::syntax_error(node, source)); 
+        errors.push(LoweringError::syntax_error(node, source, ctx)); 
         return;
     }
 
@@ -143,7 +148,7 @@ fn recursive_find_errors(
                 let child = cursor.node();
                 if child.is_error() || child.is_missing() || child.has_error() {
                     let start_len = errors.len();
-                    recursive_find_errors(cursor, source, errors);
+                    recursive_find_errors(cursor, source, errors, ctx);
                     if errors.len() > start_len {
                         found_child_error = true;
                     }
@@ -156,18 +161,18 @@ fn recursive_find_errors(
             cursor.goto_parent();
 
             if !found_child_error {
-                errors.push(LoweringError::syntax_error(node, source));
+                errors.push(LoweringError::syntax_error(node, source, ctx));
             }
             return;
         } else {
-            errors.push(LoweringError::syntax_error(node, source));
+            errors.push(LoweringError::syntax_error(node, source, ctx));
             return;
         }
     }
 
     if node.has_error() && cursor.goto_first_child() {
         loop {
-            recursive_find_errors(cursor, source, errors);
+            recursive_find_errors(cursor, source, errors, ctx);
             if !cursor.goto_next_sibling() {
                 break;
             }
