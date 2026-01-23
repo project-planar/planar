@@ -3,7 +3,7 @@ use type_sitter::NodeResult;
 use crate::{ast::Import, lowering::ctx::Ctx, pdl, spanned::Spanned};
 
 pub fn lower_import<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::ImportDefinition<'a>,
 ) -> NodeResult<'a, Spanned<Import>> {
     let fqmn_node = node.fqmn()?;

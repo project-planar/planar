@@ -2,14 +2,15 @@ use tracing::{debug, error, instrument, trace};
 
 use crate::ast;
 use crate::linker::error::LinkerError;
-use crate::linker::ids::ResolvedId;
+use crate::linker::meta::{ResolvedId, SymbolId, SymbolKind};
 use crate::linker::linked_ast::*;
 use crate::linker::lookup::SymbolLookup;
+use crate::linker::match_linker::MatchLinker;
 use crate::spanned::{Location, Spanned};
 
 pub struct AstLinker<'a> {
     pub lookup: SymbolLookup<'a>,
-    pub errors: Vec<LinkerError>,
+    pub errors: Vec<Box<LinkerError>>,
 }
 
 impl<'a> AstLinker<'a> {
@@ -47,7 +48,6 @@ impl<'a> AstLinker<'a> {
             LinkedQuery {
                 id: meta.id,
                 name: q.name.value.clone(),
-                grammar: q.grammar.value.clone(),
                 query: q.value.value.clone(),
             },
             loc,
@@ -242,38 +242,141 @@ impl<'a> AstLinker<'a> {
             LinkedQuery {
                 id: meta.id,
                 name: q.name.value.clone(),
-                grammar: q.grammar.value.clone(),
                 query: q.value.value.clone(),
             },
             loc,
         ))
     }
 
+    #[instrument(skip(self, loc, edge), fields(edge = %edge.name.value))]
+    pub fn resolve_edge(
+        &mut self,
+        edge: &ast::EdgeDefinition,
+        loc: Location,
+    ) -> Option<Spanned<LinkedEdge>> {
+        let fqmn = format!("{}.{}", self.lookup.current_module, edge.name.value);
+
+        let meta = self.lookup.table.resolve_metadata(&fqmn).or_else(|| {
+            error!(target: "linker::resolver", "Edge symbol not found: {}", fqmn);
+            None
+        })?;
+
+        Some(Spanned::new(
+            LinkedEdge {
+                id: meta.id,
+                name: edge.name.value.clone(),
+                from: SymbolId(0),
+                to: SymbolId(0),
+                relation: edge.relation.value.clone(),
+            },
+            loc,
+        ))
+    }
+
+    pub fn resolve_edge_endpoint(
+        &mut self,
+        name: &str,
+        loc: Location,
+    ) -> Option<SymbolId> {
+        let res = match self.lookup.find_symbol(name, loc) {
+            Ok(res) => res.symbol_id(),
+            Err(e) => {
+                self.errors.push(e);
+                return None;
+            }
+        };
+
+        let meta = self.lookup.table.get_metadata_by_id(res)?;
+
+        match &meta.kind {
+            SymbolKind::Fact { .. } => Some(res),
+            _ => {
+                let (src, span) = self.lookup.registry.get_source_and_span(loc);
+                self.errors.push(Box::new(LinkerError::InvalidSymbolKind {
+                    name: meta.fqmn.clone(),
+                    expected: "Fact, Type or Node".to_string(),
+                    found: self.format_kind(&meta.kind),
+                    src,
+                    span,
+                    loc,
+                }));
+                None
+            }
+        }
+    }
+
+    fn format_kind(&self, kind: &SymbolKind) -> String {
+        match kind {
+            SymbolKind::Type { .. } => "Type",
+            SymbolKind::Fact { .. } => "Fact",
+            SymbolKind::Node => "Node",
+            SymbolKind::Query { .. } => "Query",
+            SymbolKind::ExternFunction { .. } => "ExternFunction",
+            SymbolKind::Edge { .. } => "Edge",
+            _ => "unknown",
+        }
+        .to_string()
+    }
+
     #[instrument(skip(self, m))]
     pub fn resolve_match(&mut self, m: &ast::MatchStatement) -> Option<LinkedMatchStatement> {
+        let mut allowed_captures = Vec::new();
+        let mut query_fqmn = String::new();
+
         let query_ref = match &m.query_ref.value {
             ast::MatchQueryReference::Identifier(name) => {
-                trace!(target: "linker::resolver", query_name = %name, "Resolving match by identifier");
                 match self.lookup.find_symbol(name, m.query_ref.loc) {
                     Ok(res) => {
-                        debug!(target: "linker::resolver", query_id = %res.symbol_id(), "Match identifier resolved");
-                        Spanned::new(
-                            LinkedMatchQueryReference::Global(res.symbol_id()),
-                            m.query_ref.loc,
-                        )
+                        let id = res.symbol_id();
+                        if let Some(meta) = self.lookup.table.get_metadata_by_id(id) {
+                            query_fqmn = meta.fqmn.clone();
+                            if let SymbolKind::Query { captures, .. } = &meta.kind {
+                                allowed_captures =
+                                    captures.iter().map(|c| c.value.clone()).collect();
+                            }
+                        }
+                        Spanned::new(LinkedMatchQueryReference::Global(id), m.query_ref.loc)
                     }
-                    Err(e) => {
-                        self.errors.push(e);
+                    Err(err) => {
+                        self.errors.push(err);
                         return None;
                     }
                 }
             }
-            ast::MatchQueryReference::Raw(raw) => {
-                trace!(target: "linker::resolver", "Match using raw query string");
-                Spanned::new(LinkedMatchQueryReference::Raw(raw.clone()), m.query_ref.loc)
+            ast::MatchQueryReference::Raw { value, captures } => {
+                let (file_path, _) = self.lookup.registry.get_source_and_span(value.loc);
+
+                let line = value.loc.span.line;
+                let col = value.loc.span.col;
+
+                let node_context = if let Some(node_id) = self.lookup.current_node_id {
+                    format!(
+                        " (in {})",
+                        self.lookup
+                            .table
+                            .get_fqmn(node_id)
+                            .map(|s| s.as_str())
+                            .unwrap_or("node")
+                    )
+                } else {
+                    "".to_string()
+                };
+
+                query_fqmn = format!("{}:{}:{}{}", file_path.name(), line, col, node_context);
+
+                allowed_captures = captures.iter().map(|c| c.value.clone()).collect();
+
+                Spanned::new(
+                    LinkedMatchQueryReference::Raw(value.value.clone()),
+                    m.query_ref.loc,
+                )
             }
         };
-        Some(LinkedMatchStatement { query_ref })
+
+        let mut match_linker = MatchLinker::new(self, allowed_captures, query_fqmn);
+        let body = match_linker.resolve_body(&m.statements);
+
+        Some(LinkedMatchStatement { query_ref, body })
     }
 
     pub fn resolve_type_ref(&mut self, ty: &ast::TypeAnnotation) -> Option<LinkedTypeReference> {
@@ -343,25 +446,23 @@ impl<'a> AstLinker<'a> {
         loc: Location,
     ) -> Option<Spanned<LinkedExpression>> {
         let linked = match expr {
-            ast::Expression::Identifier(name) => {
-                if name == "it" {
-                    trace!(target: "linker::resolver", "Resolved 'it' context variable");
-                    Some(LinkedExpression::Identifier(ResolvedId::Local(
-                        Spanned::new("it".to_string(), loc),
-                    )))
-                } else {
-                    match self.lookup.find_symbol(name, loc) {
-                        Ok(res) => {
-                            debug!(target: "linker::resolver", symbol = %name, "Resolved identifier");
-                            Some(LinkedExpression::Identifier(res))
-                        }
-                        Err(e) => {
-                            self.errors.push(e);
-                            None
-                        }
-                    }
-                }
+            ast::Expression::It => {
+                trace!(target: "linker::resolver", "Resolved 'it' context variable");
+                Some(LinkedExpression::Identifier(ResolvedId::Local(
+                    Spanned::new("it".to_string(), loc),
+                )))
             }
+
+            ast::Expression::Identifier(name) => match self.lookup.find_symbol(name, loc) {
+                Ok(res) => {
+                    debug!(target: "linker::resolver", symbol = %name, "Resolved identifier");
+                    Some(LinkedExpression::Identifier(res))
+                }
+                Err(e) => {
+                    self.errors.push(e);
+                    None
+                }
+            },
 
             ast::Expression::Number(n) => Some(LinkedExpression::Number(n.clone())),
             ast::Expression::StringLit(s) => Some(LinkedExpression::StringLit(s.clone())),

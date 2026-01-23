@@ -8,10 +8,10 @@ use crate::{
     pdl,
     spanned::Spanned,
 };
-use type_sitter::{HasChildren, Node, NodeResult};
+use type_sitter::{HasChildren, IncorrectKind, Node, NodeResult};
 
 pub fn lower_extern_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::ExternDefinition<'a>,
 ) -> NodeResult<'a, Spanned<ExternDefinition>> {
     let mut attributes = Vec::new();
@@ -49,7 +49,7 @@ pub fn lower_extern_definition<'a>(
 }
 
 pub fn lower_extern_def_fn<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::ExternDefFn<'a>,
 ) -> NodeResult<'a, Spanned<ExternFunction>> {
     use pdl::anon_unions::ExternDefArg_ExternReturn_Identifier_OperatorIdentifier as Child;
@@ -81,7 +81,7 @@ pub fn lower_extern_def_fn<'a>(
         }
     }
 
-    let name = name.expect("Extern function must have a name or operator identifier");
+    let name = name.ok_or_else(|| IncorrectKind::new::<pdl::Identifier>(*node.raw()))?;
 
     Ok(ctx.spanned(
         &node,
@@ -94,7 +94,7 @@ pub fn lower_extern_def_fn<'a>(
 }
 
 fn lower_extern_arg<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::ExternDefArg<'a>,
 ) -> NodeResult<'a, Spanned<ExternArgument>> {
     let name_node = node.arg()?;
@@ -113,8 +113,7 @@ fn lower_extern_arg<'a>(
 mod tests {
     use super::*;
     use crate::{
-        assert_lower_snapshot, ast::ExternDefinition, lowering::ctx::Ctx, module_loader::Source,
-        spanned::FileId,
+        assert_lower_snapshot, ast::ExternDefinition, lowering::ctx::Ctx, spanned::FileId,
     };
     use tree_sitter::Parser;
 

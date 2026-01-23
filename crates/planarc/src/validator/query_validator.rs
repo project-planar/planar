@@ -1,5 +1,5 @@
 use crate::{
-    linker::linked_ast::LinkedModule,
+    linker::linked_ast::{LinkedMatchQueryReference, LinkedModule, LinkedNodeStatement},
     source_registry::SourceRegistry,
     validator::{
         error::{ValidationError, ValidationErrors},
@@ -16,42 +16,87 @@ impl<'a> QueryValidator<'a> {
     pub fn validate_module(&self, module: &LinkedModule) -> ValidationErrors {
         let mut errors = Vec::new();
 
-        for query in &module.queries {
-            if let Some(lang_name) = query.value.grammar.strip_prefix("grammars.") {
+        let global_lang = if let Some(grammar_ref) = &module.grammar {
+            
+            if let Some(lang_name) = grammar_ref.value.strip_prefix("grammars.") {
                 match self.grammars.get_language(lang_name) {
-                    Ok(lang) => {
-                        if let Err(e) = tree_sitter::Query::new(&lang, &query.value.query) {
-                            let (src, span) = self.registry.get_source_and_span(query.loc);
-                            errors.push(ValidationError::InvalidQuerySyntax {
-                                message: e.to_string(),
-                                span,
-                                src,
-                                loc: query.loc,
-                            });
-                        }
-                    }
+                    Ok(lang) => Some(lang),
                     Err(_) => {
-                        let (src, span) = self.registry.get_source_and_span(query.loc);
-                        errors.push(ValidationError::GrammarNotFound {
+                        let (src, span) = self.registry.get_source_and_span(grammar_ref.loc);
+                        errors.push(Box::new(ValidationError::GrammarNotFound {
                             name: lang_name.to_string(),
                             span,
                             src,
-                            loc: query.loc,
-                        });
+                            loc: grammar_ref.loc,
+                        }));
+                        None
                     }
                 }
             } else {
-                let (src, span) = self.registry.get_source_and_span(query.loc);
-                errors.push(ValidationError::InvalidGrammarNamespace {
-                    namespace: query.value.grammar.clone(),
+                let (src, span) = self.registry.get_source_and_span(grammar_ref.loc);
+                errors.push(Box::new(ValidationError::InvalidGrammarNamespace {
+                    namespace: grammar_ref.value.clone(),
                     span,
                     src,
-                    loc: query.loc,
-                });
+                    loc: grammar_ref.loc,
+                }));
+                None
+            }
+        } else {
+            None
+        };
+
+        for node in &module.nodes {
+            for stmt in &node.value.statements {
+                if let LinkedNodeStatement::Match(m) = &stmt.value {
+                    
+                    if let LinkedMatchQueryReference::Raw(source) = &m.query_ref.value {
+                        
+                        if let Some(lang) = &global_lang {
+                            if let Err(e) = tree_sitter::Query::new(lang, source) {
+                                let (src, span) = self.registry.get_source_and_span(m.query_ref.loc);
+                                errors.push(Box::new(ValidationError::InvalidQuerySyntax {
+                                    message: e.to_string(),
+                                    span,
+                                    src,
+                                    loc: m.query_ref.loc,
+                                }));
+                            }
+                        } else {
+                            let (src, span) = self.registry.get_source_and_span(m.query_ref.loc);
+                            errors.push(Box::new(ValidationError::UntypedQuery {
+                                span,
+                                src,
+                                loc: m.query_ref.loc,
+                            }));
+                        }
+                    }
+                }
             }
         }
 
-        ValidationErrors(errors)
+        for query in &module.queries {
+            if let Some(lang) = &global_lang {
+                if let Err(e) = tree_sitter::Query::new(&lang, &query.value.query) {
+                    let (src, span) = self.registry.get_source_and_span(query.loc);
+                    errors.push(Box::new(ValidationError::InvalidQuerySyntax {
+                        message: e.to_string(),
+                        span,
+                        src,
+                        loc: query.loc,
+                    }));
+                }
+            } else {
+                let (src, span) = self.registry.get_source_and_span(query.loc);
+                errors.push(Box::new(ValidationError::UntypedQuery {
+                    span,
+                    src,
+                    loc: query.loc,
+                }));
+            }
+        }
+
+        ValidationErrors::new(errors)
     }
 }
 
@@ -95,7 +140,7 @@ mod tests {
 
         let errs = v.validate_module(&m);
         assert!(matches!(
-            errs.0[0],
+            errs.0[0].as_ref(),
             ValidationError::InvalidQuerySyntax { .. }
         ));
     }
@@ -110,7 +155,7 @@ mod tests {
 
         let errs = v.validate_module(&m);
         assert!(matches!(
-            errs.0[0],
+            errs.0[0].as_ref(),
             ValidationError::InvalidGrammarNamespace { .. }
         ));
     }
@@ -124,6 +169,9 @@ mod tests {
         };
 
         let errs = v.validate_module(&m);
-        assert!(matches!(errs.0[0], ValidationError::GrammarNotFound { .. }));
+        assert!(matches!(
+            errs.0[0].as_ref(),
+            ValidationError::GrammarNotFound { .. }
+        ));
     }
 }

@@ -1,10 +1,14 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use anyhow::{Context, Result};
+use miette::NamedSource;
 use walkdir::WalkDir;
+
+use crate::source_registry::MietteSource;
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -28,7 +32,7 @@ pub struct PackageRoot {
 pub trait ModuleLoader {
     fn scan(&self, root: &PackageRoot) -> Result<Vec<DiscoveredModule>>;
 
-    fn load(&self, path: &Path) -> Result<Source>;
+    fn load(&self, path: &Path) -> Result<MietteSource>;
 }
 
 pub struct FsModuleLoader;
@@ -64,14 +68,14 @@ impl ModuleLoader for FsModuleLoader {
         Ok(modules)
     }
 
-    fn load(&self, path: &Path) -> Result<Source> {
+    fn load(&self, path: &Path) -> Result<MietteSource> {
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read source file: {:?}", path))?;
 
-        Ok(Source {
-            origin: path.to_string_lossy().to_string(),
-            content,
-        })
+        Ok(Arc::new(NamedSource::new(
+            path.to_string_lossy().to_string(),
+            Arc::new(content),
+        )))
     }
 }
 
@@ -99,7 +103,7 @@ impl ModuleLoader for InMemoryLoader {
         Ok(results)
     }
 
-    fn load(&self, path: &Path) -> Result<Source> {
+    fn load(&self, path: &Path) -> Result<MietteSource> {
         let path_str = path.to_string_lossy();
         let fqmn = path_str
             .trim_start_matches("/memory/")
@@ -108,11 +112,12 @@ impl ModuleLoader for InMemoryLoader {
         let content = self
             .files
             .get(fqmn)
-            .ok_or_else(|| anyhow::anyhow!("Module {} not found in memory", fqmn))?;
+            .ok_or_else(|| anyhow::anyhow!("Module {} not found in memory", fqmn))
+            .cloned()?;
 
-        Ok(Source {
-            origin: path_str.to_string(),
-            content: content.clone(),
-        })
+        Ok(Arc::new(NamedSource::new(
+            path.to_string_lossy().to_string(),
+            Arc::new(content),
+        )))
     }
 }

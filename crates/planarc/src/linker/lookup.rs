@@ -1,18 +1,17 @@
 use crate::linker::error::{AmbiguousCandidate, LinkerError};
-use crate::linker::ids::{ResolvedId, SymbolId};
-use crate::linker::symbol_table::{SymbolMetadata, SymbolTable, Visibility};
+use crate::linker::meta::{ResolvedId, SymbolId, SymbolMetadata, Visibility};
+use crate::linker::symbol_table::SymbolTable;
 use crate::source_registry::SourceRegistry;
 use crate::spanned::{Location, Spanned};
-use miette::NamedSource;
+use miette::{Diagnostic, NamedSource};
+use strsim::{damerau_levenshtein, levenshtein};
 use tracing::{debug, instrument, trace, warn};
 
 struct LookupCandidate {
     fqmn: String,
     id: SymbolId,
     loc: Location,
-    strategy: &'static str,
 }
-
 pub struct SymbolLookup<'a> {
     pub table: &'a SymbolTable,
     pub registry: &'a SourceRegistry,
@@ -25,7 +24,7 @@ pub struct SymbolLookup<'a> {
 
 impl<'a> SymbolLookup<'a> {
     #[instrument(skip(self, loc), fields(symbol = name, current_module = %self.current_module))]
-    pub fn find_symbol(&self, name: &str, loc: Location) -> Result<ResolvedId, LinkerError> {
+    pub fn find_symbol(&self, name: &str, loc: Location) -> Result<ResolvedId, Box<LinkerError>> {
         trace!(target: "linker::lookup", "Starting symbol resolution");
 
         if let Some(resolved) = self.lookup_scoped(name, loc) {
@@ -49,17 +48,21 @@ impl<'a> SymbolLookup<'a> {
                 return Ok(fallback);
             }
             debug!(target: "linker::lookup", "No candidates found for {}", name);
-            return Err(self.error_unknown(name, loc));
+            return Err(self.error_unknown(name, loc, None));
         }
 
         self.select_best_candidate(name, loc, candidates)
     }
 
-    pub fn check_access(&self, fqmn: &str, loc: Location) -> Result<&SymbolMetadata, LinkerError> {
+    pub fn check_access(
+        &self,
+        fqmn: &str,
+        loc: Location,
+    ) -> Result<&SymbolMetadata, Box<LinkerError>> {
         let meta = self
             .table
             .resolve_metadata(fqmn)
-            .ok_or_else(|| self.error_unknown(fqmn, loc))?;
+            .ok_or_else(|| self.error_unknown(fqmn, loc, None))?;
         self.check_access_metadata(meta, fqmn, loc)?;
         Ok(meta)
     }
@@ -69,7 +72,7 @@ impl<'a> SymbolLookup<'a> {
         meta: &SymbolMetadata,
         name: &str,
         loc: Location,
-    ) -> Result<(), LinkerError> {
+    ) -> Result<(), Box<LinkerError>> {
         let allowed = match meta.visibility {
             Visibility::Public => true,
             Visibility::Package => meta.package == self.current_package,
@@ -132,7 +135,7 @@ impl<'a> SymbolLookup<'a> {
         name: &str,
         loc: Location,
         mut candidates: Vec<LookupCandidate>,
-    ) -> Result<ResolvedId, LinkerError> {
+    ) -> Result<ResolvedId, Box<LinkerError>> {
         candidates.sort_by(|a, b| a.fqmn.cmp(&b.fqmn));
         candidates.dedup_by(|a, b| a.fqmn == b.fqmn);
 
@@ -146,10 +149,10 @@ impl<'a> SymbolLookup<'a> {
         let error_candidates = candidates
             .into_iter()
             .map(|c| {
-                let (c_src, c_span) = self.registry.get_source_and_span(c.loc);
+                let (src, c_span) = self.registry.get_source_and_span(c.loc);
                 AmbiguousCandidate {
                     module_name: c.fqmn,
-                    src: NamedSource::new(c_src.name().to_string(), c_src.inner().to_string()),
+                    src,
                     span: c_span,
                     loc: c.loc,
                 }
@@ -157,13 +160,14 @@ impl<'a> SymbolLookup<'a> {
             .collect();
 
         let (src, span) = self.registry.get_source_and_span(loc);
-        Err(LinkerError::AmbiguousReference {
+
+        Err(Box::new(LinkerError::AmbiguousReference {
             name: name.to_string(),
-            src: NamedSource::new(src.name().to_string(), src.inner().to_string()),
+            src,
             span,
             candidates: error_candidates,
             loc,
-        })
+        }))
     }
 
     fn lookup_fallbacks(&self, name: &str, loc: Location) -> Option<ResolvedId> {
@@ -193,22 +197,82 @@ impl<'a> SymbolLookup<'a> {
                 fqmn: fqmn.to_string(),
                 id: meta.id,
                 loc: meta.location,
-                strategy,
             });
         }
     }
 
-    fn error_unknown(&self, name: &str, loc: Location) -> LinkerError {
+    pub fn error_unknown(&self, name: &str, loc: Location, help: Option<String>) -> Box<LinkerError> {
         let (src, span) = self.registry.get_source_and_span(loc);
-        LinkerError::UnknownSymbol {
+
+        let help = help.or_else(|| {
+            self.find_suggestion(name)
+                .map(|s| format!("Did you mean '{}'?", s))
+        });
+
+        Box::new(LinkerError::UnknownSymbol {
             name: name.to_string(),
-            src: NamedSource::new(src.name().to_string(), src.inner().to_string()),
+            src,
             span,
             loc,
-        }
+            help
+        })
     }
 
-    fn error_access_denied(&self, name: &str, loc: Location, meta: &SymbolMetadata) -> LinkerError {
+    /// - current="app.main", fqmn="app.main.User" -> "User"
+    /// - import="std.math",  fqmn="std.math.PI"   -> "math.PI"
+    /// - no imports,         fqmn="other.Data"    -> "other.Data"
+    fn relativize_fqmn(&self, fqmn: &str) -> String {
+        let local_prefix = format!("{}.", self.current_module);
+        if let Some(local_name) = fqmn.strip_prefix(&local_prefix) {
+            return local_name.to_string();
+        }
+
+        for imp in &self.imports {
+            let import_fqmn = &imp;
+            
+            if fqmn.starts_with(*import_fqmn)
+                && let Some(remainder) = fqmn.strip_prefix(*import_fqmn) {
+                    if remainder.starts_with('.') {
+                        let alias = import_fqmn.split('.').next_back().unwrap_or(import_fqmn);
+                        return format!("{}{}", alias, remainder);
+                    } else if remainder.is_empty() {
+                        let alias = import_fqmn.split('.').next_back().unwrap_or(import_fqmn);
+                        return alias.to_string();
+                    }
+                }
+        }
+
+        fqmn.to_string()
+    }
+
+    fn find_suggestion(&self, typo: &str) -> Option<String> {
+        let mut best_match = None;
+        let mut min_distance = usize::MAX;
+
+        let threshold = std::cmp::max(typo.chars().count() / 3, 1);
+
+        for fqmn in self.table.name_to_id.keys() {
+        
+            let visible_name = self.relativize_fqmn(fqmn);
+            
+            let dist = strsim::damerau_levenshtein(typo, &visible_name);
+
+            if dist <= threshold && dist < min_distance {
+                min_distance = dist;
+                best_match = Some(visible_name); 
+            }
+        }
+
+
+        best_match
+    }
+
+    fn error_access_denied(
+        &self,
+        name: &str,
+        loc: Location,
+        meta: &SymbolMetadata,
+    ) -> Box<LinkerError> {
         let (src, span) = self.registry.get_source_and_span(loc);
         let reason = match meta.visibility {
             Visibility::Package => format!("internal to package '{}'", meta.package),
@@ -216,13 +280,13 @@ impl<'a> SymbolLookup<'a> {
             Visibility::Scoped(_) => "private to its parent node".to_string(),
             _ => "restricted".to_string(),
         };
-        LinkerError::AccessViolation {
+        Box::new(LinkerError::AccessViolation {
             name: name.to_string(),
             reason,
-            src: NamedSource::new(src.name().to_string(), src.inner().to_string()),
+            src,
             span,
             loc,
-        }
+        })
     }
 
     fn trace_success(&self, strategy: &str, fqmn: &str, meta: &SymbolMetadata) {

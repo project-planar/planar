@@ -1,4 +1,4 @@
-use type_sitter::{HasChild, HasChildren, Node, NodeResult};
+use type_sitter::{HasChild, HasChildren, IncorrectKind, Node, NodeResult};
 
 use crate::{
     ast::{Expression, TypeAnnotation, TypeDeclaration, TypeDefinition, TypeField, Visibility},
@@ -16,7 +16,7 @@ type AtomUnion<'a> =
     >;
 
 pub fn lower_type_declaration<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::TypeDeclaration<'a>,
 ) -> NodeResult<'a, Spanned<TypeDeclaration>> {
     let name_node = node.name()?;
@@ -50,7 +50,7 @@ pub fn lower_type_declaration<'a>(
 }
 
 fn lower_type_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::TypeDefinition<'a>,
 ) -> NodeResult<'a, Spanned<TypeDefinition>> {
     let base_type = if let Some(ty_node_res) = node.r#type() {
@@ -69,7 +69,7 @@ fn lower_type_definition<'a>(
 }
 
 fn lower_type_field_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::TypeFieldDefinition<'a>,
 ) -> NodeResult<'a, Spanned<TypeField>> {
     let name = ctx.spanned(&node.name()?, ctx.text(&node.name()?));
@@ -79,7 +79,7 @@ fn lower_type_field_definition<'a>(
 }
 
 pub fn lower_type_annotation<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::TypeAnnotation<'a>,
 ) -> NodeResult<'a, TypeAnnotation> {
     use pdl::anon_unions::Refinement_TypeAnnotation_TypeApplication_TypeIdentifier as U;
@@ -121,19 +121,21 @@ pub fn lower_type_annotation<'a>(
         }
     }
 
+    let name = name.ok_or_else(|| IncorrectKind::new::<pdl::TypeIdentifier>(*node.raw()))?;
+
     Ok(TypeAnnotation {
-        name: name.expect("Type name missing"),
+        name,
         args,
         refinement,
     })
 }
 
 pub fn lower_expression_atom<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     u: AtomUnion<'a>,
 ) -> NodeResult<'a, Spanned<Expression>> {
     match u {
-        AtomUnion::It(n) => Ok(ctx.spanned(&n, Expression::Identifier(ctx.text(&n)))),
+        AtomUnion::It(n) => Ok(ctx.spanned(&n, Expression::It)),
         AtomUnion::Fqmn(n) => Ok(ctx.spanned(&n, Expression::Identifier(ctx.text(&n)))),
         AtomUnion::Number(n) => Ok(ctx.spanned(&n, Expression::Number(ctx.text(&n)))),
         AtomUnion::String(n) => Ok(ctx.spanned(&n, Expression::StringLit(ctx.text(&n)))),
@@ -143,13 +145,18 @@ pub fn lower_expression_atom<'a>(
         AtomUnion::InExpression(n) => lower_in_expression(ctx, n),
         AtomUnion::ParenthesizedExpression(n) => {
             let mut cursor = n.walk();
-            lower_expression_list(ctx, n.children(&mut cursor))
+            lower_expression_list(ctx, &n, n.children(&mut cursor))
         }
     }
 }
 
-pub fn lower_expression_list<'a, I>(ctx: &Ctx<'a>, nodes: I) -> NodeResult<'a, Spanned<Expression>>
+pub fn lower_expression_list<'a, I, TNode>(
+    ctx: &Ctx,
+    parent: &TNode,
+    nodes: I,
+) -> NodeResult<'a, Spanned<Expression>>
 where
+    TNode: Node<'a>,
     I: Iterator<Item = NodeResult<'a, AtomUnion<'a>>>,
 {
     let mut atoms = Vec::new();
@@ -165,7 +172,7 @@ where
     }
 
     if atoms.is_empty() {
-        panic!("Empty expression");
+        return Err(IncorrectKind::new::<TNode>(*parent.raw()));
     }
 
     let mut grouped: Vec<(Spanned<Expression>, bool)> = Vec::new();
@@ -174,7 +181,7 @@ where
     for (expr, is_op) in atoms {
         if is_op {
             if !current_call.is_empty() {
-                grouped.push((fold_call(ctx, &mut current_call), false));
+                grouped.push((fold_call(ctx, parent, &mut current_call)?, false));
             }
             grouped.push((expr, true));
         } else {
@@ -182,11 +189,13 @@ where
         }
     }
     if !current_call.is_empty() {
-        grouped.push((fold_call(ctx, &mut current_call), false));
+        grouped.push((fold_call(ctx, parent, &mut current_call)?, false));
     }
 
     let mut it = grouped.into_iter();
-    let (mut result, _) = it.next().unwrap();
+    let (mut result, _) = it
+        .next()
+        .ok_or_else(|| IncorrectKind::new::<TNode>(*parent.raw()))?;
 
     while let Some((op_expr, _)) = it.next() {
         let loc = op_expr.loc;
@@ -200,7 +209,7 @@ where
             Expression::OperatorIdentifier(op_str) => {
                 let (right, _) = it
                     .next()
-                    .expect("Expected expression after binary operator");
+                    .ok_or_else(|| IncorrectKind::new::<TNode>(*parent.raw()))?;
                 let loc = merge_locations(result.loc, right.loc);
                 (op_str, right, loc)
             }
@@ -208,12 +217,12 @@ where
             Expression::StringLit(op_str) => {
                 let (right, _) = it
                     .next()
-                    .expect("Expected expression after binary operator");
+                    .ok_or_else(|| IncorrectKind::new::<TNode>(*parent.raw()))?;
                 let loc = merge_locations(result.loc, right.loc);
                 (op_str, right, loc)
             }
 
-            _ => unreachable!("Expected operator expression, got {:?}", op_expr.value),
+            _ => return Err(IncorrectKind::new::<TNode>(*parent.raw())),
         };
 
         result = Spanned::new(
@@ -229,22 +238,35 @@ where
     Ok(result)
 }
 
-fn fold_call<'a>(ctx: &Ctx<'a>, parts: &mut Vec<Spanned<Expression>>) -> Spanned<Expression> {
+fn fold_call<'a, TNode>(
+    ctx: &Ctx,
+    parent: &TNode,
+    parts: &mut Vec<Spanned<Expression>>,
+) -> NodeResult<'a, Spanned<Expression>>
+where
+    TNode: Node<'a>,
+{
+    if parts.is_empty() {
+        return Err(IncorrectKind::new::<TNode>(*parent.raw()));
+    }
+
     if parts.len() == 1 {
-        parts.pop().unwrap()
+        Ok(parts.pop().expect("len is 1"))
     } else {
         let mut it = parts.drain(..);
         let head = it.next().unwrap();
         let args: Vec<_> = it.collect();
-        let loc = merge_locations(head.loc, args.last().unwrap().loc);
 
-        Spanned::new(
+        let end_loc = args.last().map(|a| a.loc).unwrap_or(head.loc);
+        let loc = merge_locations(head.loc, end_loc);
+
+        Ok(Spanned::new(
             Expression::Call {
                 function: Box::new(head),
                 args,
             },
             loc,
-        )
+        ))
     }
 }
 

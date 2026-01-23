@@ -31,7 +31,9 @@ pub fn run(path: PathBuf) -> Result<()> {
         let kind_str = format!("{:?}", meta.kind);
         let span = &meta.location.span;
         let file_id = &meta.location.file_id;
-        let fqdm = program.symbol_table.symbols
+        let fqdm = program
+            .symbol_table
+            .symbols
             .get(symbol_id)
             .map(|m| m.fqmn.as_str())
             .unwrap_or("unknown");

@@ -1844,6 +1844,7 @@ dependencies = [
  "rayon",
  "rkyv",
  "serde",
+ "strsim",
  "tempfile",
  "test-log",
  "thiserror 2.0.17",
@@ -1851,6 +1852,7 @@ dependencies = [
  "tracing-subscriber",
  "tree-sitter",
  "tree-sitter-planardl",
+ "tree-sitter-tsquery",
  "type-sitter",
  "type-sitter-gen",
  "type-sitter-lib",
@@ -3018,6 +3020,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b9b18034c684a2420722be8b2a91c9c44f2546b631c039edf575ccba8c61be1"
 dependencies = [
  "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-tsquery"
+version = "0.8.0"
+dependencies = [
+ "cc",
+ "tree-sitter",
  "tree-sitter-language",
 ]
 

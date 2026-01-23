@@ -1,26 +1,21 @@
 use crate::ast::{QueryDefinition, Visibility};
-use crate::lowering::common::pub_vis_to_vis;
+use crate::lowering::common::{extract_query_data, pub_vis_to_vis};
 use crate::lowering::ctx::Ctx;
 use crate::pdl;
-use crate::spanned::Spanned;
-use type_sitter::{Node, NodeResult};
+use crate::spanned::{FileId, Location, Span, Spanned};
+use tree_sitter::Parser;
+use type_sitter::{IncorrectKind, Node, NodeResult, UntypedNode};
 
 pub fn lower_query_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::QueryDefinition<'a>,
 ) -> NodeResult<'a, Spanned<QueryDefinition>> {
     let name_node = node.name()?;
     let name = ctx.spanned(&name_node, ctx.text(&name_node));
 
-    let grammar_node = node.grammar()?;
-    let grammar = ctx.spanned(&grammar_node, ctx.text(&grammar_node));
-
     let value_node = node.value()?;
-    let content_text = if let Some(content_res) = value_node.content() {
-        ctx.text(&content_res?)
-    } else {
-        String::new()
-    };
+
+    let (content_text, captures) = extract_query_data(ctx, &value_node)?;
 
     let vis = if let Some(r#pub) = node.r#pub() {
         let r#pub = r#pub?;
@@ -29,15 +24,13 @@ pub fn lower_query_definition<'a>(
         Visibility::Private
     };
 
-    let value = ctx.spanned(&value_node, content_text);
-
     Ok(ctx.spanned(
         &node,
         QueryDefinition {
             name,
-            grammar,
-            value,
+            value: content_text,
             vis,
+            captures,
         },
     ))
 }
@@ -50,7 +43,7 @@ mod tests {
     #[test]
     fn test_query_definition() {
         assert_lower_snapshot!(
-            "query includePattern: grammars.nginx = `include (string)@path;` lines",
+            "query includePattern: grammars.nginx = `include (string)@path;`",
             as_query_definition,
             lower_query_definition
         );
@@ -60,6 +53,38 @@ mod tests {
     fn test_empty_query() {
         assert_lower_snapshot!(
             "query empty: some.lang = ``",
+            as_query_definition,
+            lower_query_definition
+        );
+    }
+
+    #[test]
+    fn test_query_definition_with_captures() {
+        assert_lower_snapshot!(
+            "query find_stuff: grammars.rust = `
+                (function_item 
+                    name: (identifier) @fn.name
+                    body: (block) @fn.body
+                ) ; @this_is_ignored
+            `",
+            as_query_definition,
+            lower_query_definition
+        );
+    }
+
+    #[test]
+    fn test_query_no_captures() {
+        assert_lower_snapshot!(
+            "query empty: some.lang = `(node)`",
+            as_query_definition,
+            lower_query_definition
+        );
+    }
+
+    #[test]
+    fn test_query_complex_names() {
+        assert_lower_snapshot!(
+            "query labels: lang = `@simple @with.dot @with-dash @under_score`",
             as_query_definition,
             lower_query_definition
         );

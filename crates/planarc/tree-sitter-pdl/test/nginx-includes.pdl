@@ -16,7 +16,7 @@ node IncludeDirective {
 
         let files = resolve_glob @path.text
 
-        emit $CURRENT_FILE -[Includes]-> files 
+        emit File { path: context.current_file.path } -[Includes]-> files 
         
     }
 }

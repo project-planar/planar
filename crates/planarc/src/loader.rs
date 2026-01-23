@@ -59,6 +59,7 @@ impl LanguageProvider for MockLanguageLoader {
     ) -> anyhow::Result<tree_sitter::Language> {
         match name {
             "pdl" => Ok(tree_sitter_planardl::LANGUAGE.into()),
+            "tsquery" => Ok(tree_sitter_tsquery::LANGUAGE.into()),
             _ => Err(anyhow::anyhow!("Grammar {name} not found")),
         }
     }

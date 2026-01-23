@@ -1,6 +1,6 @@
 use crate::{
     linker::{
-        ids::ResolvedId,
+        meta::ResolvedId,
         linked_ast::{LinkedExpression, LinkedModule, LinkedTypeDefinition, LinkedTypeReference},
         symbol_table::SymbolTable,
     },
@@ -35,14 +35,14 @@ impl<'a> WitValidator<'a> {
             }
         }
 
-        ValidationErrors(errors)
+        ValidationErrors::new(errors)
     }
 
     fn check_type(
         &self,
         type_name: &str,
         def: &Spanned<LinkedTypeDefinition>,
-        errors: &mut Vec<ValidationError>,
+        errors: &mut Vec<Box<ValidationError>>,
     ) {
         if let Some(base) = &def.value.base_type {
             self.check_type_ref(type_name, base, errors);
@@ -58,20 +58,20 @@ impl<'a> WitValidator<'a> {
         &self,
         owner_name: &str,
         refer: &LinkedTypeReference,
-        errors: &mut Vec<ValidationError>,
+        errors: &mut Vec<Box<ValidationError>>,
     ) {
         match &refer.symbol.value {
             ResolvedId::Global(id_spanned) => {
                 if let Some(fqmn) = self.table.get_fqmn(id_spanned.value) {
                     if !self.is_wit_safe(fqmn) {
                         let (src, span) = self.registry.get_source_and_span(refer.symbol.loc);
-                        errors.push(ValidationError::WitIncompatibility {
+                        errors.push(Box::new(ValidationError::WitIncompatibility {
                             name: owner_name.to_string(),
                             used: fqmn.clone(),
                             span,
                             src,
                             loc: refer.symbol.loc,
-                        });
+                        }));
                     }
                 }
             }
@@ -80,11 +80,11 @@ impl<'a> WitValidator<'a> {
 
         if let Some(re) = &refer.refinement {
             let (src, span) = self.registry.get_source_and_span(re.loc);
-            errors.push(ValidationError::WitRefinementDisallowed {
+            errors.push(Box::new(ValidationError::WitRefinementDisallowed {
                 span,
                 src,
                 loc: refer.symbol.loc,
-            });
+            }));
         }
 
         for arg in &refer.args {
@@ -160,7 +160,10 @@ mod tests {
         let errors = run_validation(&files);
         let error = errors.0.first().unwrap();
 
-        assert!(matches!(error, ValidationError::WitIncompatibility { .. }));
+        assert!(matches!(
+            error.as_ref(),
+            ValidationError::WitIncompatibility { .. }
+        ));
     }
 
     #[test]
@@ -182,7 +185,7 @@ mod tests {
             errors
                 .0
                 .iter()
-                .any(|e| matches!(e, ValidationError::WitRefinementDisallowed { .. })),
+                .any(|e| matches!(e.as_ref(), ValidationError::WitRefinementDisallowed { .. })),
             "Refinements must be strictly forbidden in WIT exports"
         );
     }

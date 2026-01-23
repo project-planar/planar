@@ -3,7 +3,12 @@ use std::fmt;
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use thiserror::Error;
 
-use crate::{compiler::error::ErrorWithLocation, spanned::Location};
+use crate::{
+    error::{ErrorCollection, ErrorWithLocation},
+    impl_diagnostic_with_location,
+    source_registry::MietteSource,
+    spanned::Location,
+};
 
 #[derive(Error, Clone, Debug, Diagnostic)]
 pub enum ValidationError {
@@ -16,7 +21,7 @@ pub enum ValidationError {
         #[label("this type is not from std.wit.*")]
         span: SourceSpan,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         loc: Location,
     },
 
@@ -26,7 +31,7 @@ pub enum ValidationError {
         #[label("refinement found here")]
         span: SourceSpan,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         loc: Location,
     },
 
@@ -43,7 +48,7 @@ pub enum ValidationError {
         #[label("namespace must start with 'grammars.'")]
         span: SourceSpan,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         loc: Location,
     },
 
@@ -59,7 +64,7 @@ pub enum ValidationError {
         #[label("no build artifact for grammar '{name}'")]
         span: SourceSpan,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         loc: Location,
     },
 
@@ -70,43 +75,30 @@ pub enum ValidationError {
         #[label("parsing of tree-sitter query failed")]
         span: SourceSpan,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
+        loc: Location,
+    },
+    #[error("Untyped query: no grammar specified for this file")]
+    #[diagnostic(
+        code(pdl::validator::untyped_query),
+        help("Add 'using grammars.<lang>' at the top of the file to enable S-expression validation.")
+    )]
+    UntypedQuery {
+        #[source_code]
+        src: MietteSource,
+        #[label("this query requires a grammar")]
+        span: SourceSpan,
         loc: Location,
     },
 }
 
-#[derive(Clone, Error, Diagnostic)]
-#[error("Found {} linker errors", .0.len())]
-pub struct ValidationErrors(#[related] pub Vec<ValidationError>);
+pub type ValidationErrors = ErrorCollection<ValidationError>;
 
-impl ErrorWithLocation for ValidationError {
-    fn location(&self) -> Location {
-        match &self {
-            ValidationError::WitIncompatibility { loc, .. } => loc.clone(),
-            ValidationError::WitRefinementDisallowed { loc, .. } => loc.clone(),
-            ValidationError::InvalidGrammarNamespace { loc, .. } => loc.clone(),
-            ValidationError::GrammarNotFound { loc, .. } => loc.clone(),
-            ValidationError::InvalidQuerySyntax { loc, .. } => loc.clone(),
-        }
-    }
-}
-
-impl ValidationErrors {
-    pub fn new(errors: Vec<ValidationError>) -> Self {
-        Self(errors)
-    }
-
-    pub fn extend(&mut self, errors: ValidationErrors) {
-        self.0.extend(errors.0);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl fmt::Debug for ValidationErrors {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&miette::Report::new(self.clone()), f)
-    }
-}
+impl_diagnostic_with_location!(ValidationError, {
+    ValidationError::WitIncompatibility,
+    ValidationError::WitRefinementDisallowed,
+    ValidationError::InvalidGrammarNamespace,
+    ValidationError::GrammarNotFound,
+    ValidationError::InvalidQuerySyntax,
+    ValidationError::UntypedQuery
+});

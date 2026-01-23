@@ -21,7 +21,7 @@ node Service2 {}
 Match Statement
 ==================
 node Test {
-  query test: grammars.unknown = `(key) @k`
+  query test = `(key) @k`
   match test {}
 }
 
@@ -34,9 +34,6 @@ node Test {
     (block
       (query_definition
         name: (identifier)
-        grammar: (fqmn
-          (identifier)
-          (identifier))
         value: (query_literal
           content: (raw_content)))
       (match_stmt
@@ -162,7 +159,7 @@ import std.lint
 Query Declaration
 ==================
 
-query QueryDefPattern: grammars.unknown = `
+query QueryDefPattern = `
     (query_definition
         name: (identifier) @query_name
         value: (query_literal
@@ -176,9 +173,6 @@ query QueryDefPattern: grammars.unknown = `
 (source_file
   (query_definition
     (identifier)
-    (fqmn
-      (identifier)
-      (identifier))
     (query_literal
       (raw_content))))
 
@@ -188,12 +182,12 @@ Nginx hello world
 
 import std.fs 
 
-query includePattern: grammars.nginx = `include (string)@path;`
+query includePattern = `include (string)@path;`
 
 node IncludeDirective {
   match includePattern {
     @path {
-      global -> std.fs.resolve_glob $CURRENT_FILE @path.text
+      let files = std.fs.resolve_path $CURRENT_FILE @path.text
     }
   }
 }
@@ -207,9 +201,6 @@ node IncludeDirective {
       (identifier)))
   (query_definition
     (identifier)
-    (fqmn
-      (identifier)
-      (identifier))
     (query_literal
       (raw_content)))
   (node_definition
@@ -220,21 +211,20 @@ node IncludeDirective {
         (identifier)
         (match_block
           (capture
-            (variable)
+            (cap_identifier)
             (capture_block
-              (graph_bind
-                (graph_left_statements
+              (let_bind
+                (identifier)
+                (fqmn
+                  (identifier)
+                  (identifier)
                   (identifier))
-                (relation)
-                (graph_right_statements
-                  (call_func
-                    (fqmn
-                      (identifier)
-                      (identifier)
-                      (identifier))
-                    (variable)
-                    (variable
-                      (property_access))))))))))))
+                (operator_identifier)
+                (fqmn
+                  (identifier))
+                (fqmn
+                  (identifier)
+                  (identifier))))))))))
 
 ==================
 Fact Declaration
@@ -432,7 +422,98 @@ edge Includes = File -> File
     (type_identifier
       (fqmn
         (identifier)))
-    (relation)
+    (simple_relation)
     (type_identifier
       (fqmn
         (identifier)))))
+
+==================
+Let Bindings
+==================
+
+node Node {
+  match `` {
+    @capture {
+      let A = 10
+    }
+    let A = 10
+  }
+}
+
+---
+
+(source_file
+  (node_definition
+    (fqmn
+      (identifier))
+    (block
+      (match_stmt
+        (query_literal)
+        (match_block
+          (capture
+            (cap_identifier)
+            (capture_block
+              (let_bind
+                (identifier)
+                (number))))
+          (let_bind
+            (identifier)
+            (number)))))))
+
+==================
+Emit Fact
+==================
+
+node A {
+  match A {
+    emit File { path: context.current_file.path } -[main.Includes]-> File { path: @cap.text }
+  }
+}
+---
+
+(source_file
+  (node_definition
+    (fqmn
+      (identifier))
+    (block
+      (match_stmt
+        (identifier)
+        (match_block
+          (emit
+            (emmited_fact
+              (type_identifier
+                (fqmn
+                  (identifier)))
+              (emmited_fact_field
+                (identifier)
+                (fqmn
+                  (identifier)
+                  (identifier)
+                  (identifier))))
+            (relation
+              (fqmn
+                (identifier)
+                (identifier)))
+            (emmited_fact
+              (type_identifier
+                (fqmn
+                  (identifier)))
+              (emmited_fact_field
+                (identifier)
+                (fqmn
+                  (identifier)
+                  (identifier))))))))))
+
+==================
+Using grammars
+==================
+
+using grammars.pdl
+
+---
+
+(source_file
+  (grammar_declaration
+    (fqmn
+      (identifier)
+      (identifier))))

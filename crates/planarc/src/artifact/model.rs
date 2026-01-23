@@ -3,15 +3,15 @@ use std::collections::BTreeMap;
 
 use crate::{
     linker::{
-        ids::{SymbolId, SymbolKind},
+        meta::{SymbolId, SymbolKind},
         linked_ast::LinkedModule,
         symbol_table::SymbolTable,
     },
     spanned::{FileId, Location},
 };
 
-#[derive(Debug, Archive, Serialize, Deserialize, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
+// #[derive(Debug, Archive, Serialize, Deserialize, PartialEq, Eq)]
+// #[rkyv(derive(Debug))]
 pub struct Bundle {
     pub symbol_table: SymbolTable,
     pub modules: BTreeMap<String, LinkedModule>,
@@ -20,8 +20,8 @@ pub struct Bundle {
     pub grammars: BTreeMap<String, GrammarMetadata>,
 }
 
-#[derive(Debug, Archive, Serialize, Deserialize, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
+// #[derive(Debug, Archive, Serialize, Deserialize, PartialEq, Eq)]
+// #[rkyv(derive(Debug))]
 pub struct GrammarMetadata {
     pub version: String,
 }

@@ -1,11 +1,51 @@
 use miette::{Diagnostic, NamedSource, SourceSpan};
-use std::fmt;
+use std::{fmt, sync::Arc};
 use thiserror::Error;
 
-use crate::{compiler::error::ErrorWithLocation, spanned::Location};
+use crate::{
+    error::ErrorCollection, impl_diagnostic_with_location, source_registry::MietteSource,
+    spanned::Location,
+};
 
 #[derive(Clone, Debug, Error, Diagnostic)]
 pub enum LinkerError {
+    #[error("Undefined capture: '@{capture_name}' is not defined in query '{query_name}'")]
+    #[diagnostic(
+        code(pdl::linker::undefined_capture),
+        help(
+            "The capture '@{capture_name}' must be present in the associated S-expression. \
+             Check for typos and ensure it's not commented out in the query string."
+        )
+    )]
+    UndefinedCapture {
+        query_name: String,
+        capture_name: String,
+
+        #[source_code]
+        src: MietteSource,
+
+        #[label("'@{capture_name}' is not captured by the query")]
+        span: SourceSpan,
+
+        loc: Location,
+    },
+    #[error("Invalid capture block: identifier '{name}' cannot have a binding block")]
+    #[diagnostic(
+        code(pdl::linker::invalid_capture_block),
+        help(
+            "Only query captures (starting with '@') can define a lexical scope for binding \
+             identifiers to generated facts. Plain variables must be assigned using '='."
+        )
+    )]
+    InvalidCaptureBlock {
+        name: String,
+        #[source_code]
+        src: MietteSource,
+        #[label("plain identifier cannot open a binding block")]
+        span: SourceSpan,
+        loc: Location,
+    },
+
     #[error("Access violation: symbol '{name}' is {reason}")]
     #[diagnostic(
         code(pdl::linker::access_violation),
@@ -15,7 +55,7 @@ pub enum LinkerError {
         name: String,
         reason: String,
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         #[label("access to this symbol is restricted")]
         span: SourceSpan,
         loc: Location,
@@ -27,7 +67,7 @@ pub enum LinkerError {
         name: String,
 
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
 
         #[label("redefined here")]
         span: SourceSpan,
@@ -41,13 +81,13 @@ pub enum LinkerError {
     #[diagnostic(code(pdl::linker::unknown_symbol))]
     UnknownSymbol {
         name: String,
-
         #[source_code]
-        src: NamedSource<String>,
-
+        src: MietteSource,
         #[label("undeclared identifier")]
         span: SourceSpan,
         loc: Location,
+        #[help]
+        help: Option<String>
     },
 
     #[error("Ambiguous reference: '{name}' could refer to multiple symbols")]
@@ -56,7 +96,7 @@ pub enum LinkerError {
         name: String,
 
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
 
         #[label("ambiguous usage")]
         span: SourceSpan,
@@ -79,7 +119,7 @@ pub enum LinkerError {
         found: String,
 
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
 
         #[label("expected {expected}, found {found}")]
         span: SourceSpan,
@@ -93,7 +133,7 @@ pub struct AmbiguousCandidate {
     pub module_name: String,
 
     #[source_code]
-    pub src: NamedSource<String>,
+    pub src: MietteSource,
 
     #[label("defined here")]
     pub span: SourceSpan,
@@ -104,48 +144,24 @@ pub struct AmbiguousCandidate {
 #[error("Originally defined here")]
 pub struct PreviousDefinition {
     #[source_code]
-    pub src: NamedSource<String>,
+    pub src: MietteSource,
 
     #[label("original definition")]
     pub span: SourceSpan,
     pub loc: Location,
 }
 
-#[derive(Clone, Error, Diagnostic)]
-#[error("Found {} linker errors", .0.len())]
-pub struct LinkerErrors(#[related] pub Vec<LinkerError>);
+impl_diagnostic_with_location!(LinkerError, {
+    LinkerError::SymbolCollision,
+    LinkerError::UnknownSymbol,
+    LinkerError::AmbiguousReference,
+    LinkerError::InvalidSymbolKind,
+    LinkerError::AccessViolation,
+    LinkerError::InvalidCaptureBlock,
+    LinkerError::UndefinedCapture
+});
 
-impl ErrorWithLocation for LinkerError {
-    fn location(&self) -> Location {
-        match self {
-            LinkerError::SymbolCollision { loc, .. } => *loc,
-            LinkerError::UnknownSymbol { loc, .. } => *loc,
-            LinkerError::AmbiguousReference { loc, .. } => *loc,
-            LinkerError::InvalidSymbolKind { loc, .. } => *loc,
-            LinkerError::AccessViolation { loc, .. } => *loc,
-        }
-    }
-}
-
-impl LinkerErrors {
-    pub fn new(errors: Vec<LinkerError>) -> Self {
-        Self(errors)
-    }
-
-    pub fn extend(&mut self, errors: LinkerErrors) {
-        self.0.extend(errors.0);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl fmt::Debug for LinkerErrors {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&miette::Report::new(self.clone()), f)
-    }
-}
+pub type LinkerErrors = ErrorCollection<LinkerError>;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum GraphError {
@@ -156,7 +172,7 @@ pub enum GraphError {
     )]
     UnknownImport {
         #[source_code]
-        src: NamedSource<String>,
+        src: MietteSource,
         #[label("this import")]
         span: SourceSpan,
         import: String,
@@ -193,7 +209,7 @@ pub enum GraphError {
 #[error("...module '{module}' imports '{target}'")]
 pub struct CycleStep {
     #[source_code]
-    pub src: NamedSource<String>,
+    pub src: MietteSource,
     #[label("imports '{target}' here")]
     pub span: SourceSpan,
     pub loc: Location,

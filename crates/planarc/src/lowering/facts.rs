@@ -4,14 +4,13 @@ use crate::lowering::type_decl::{lower_expression_atom, lower_type_annotation};
 use crate::pdl;
 use crate::{
     ast::*,
-    spanned::{Span, Spanned},
-    utils::TypeSitterResultExt,
+    spanned::{Span, Spanned}
 };
 
 use type_sitter::{HasChild, HasChildren, IncorrectKind, Node, NodeResult};
 
 pub fn lower_fact_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::FactDefinition<'a>,
 ) -> NodeResult<'a, Spanned<FactDefinition>> {
     use pdl::anon_unions::Attribute_FactFieldDefinition_Pub as U;
@@ -45,7 +44,7 @@ pub fn lower_fact_definition<'a>(
 }
 
 fn lower_fact_field<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::FactFieldDefinition<'a>,
 ) -> NodeResult<'a, Spanned<FactField>> {
     let mut attributes = Vec::new();

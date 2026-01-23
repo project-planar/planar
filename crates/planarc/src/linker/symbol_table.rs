@@ -1,36 +1,14 @@
 use std::collections::BTreeMap;
 
-use rkyv::{Archive, Deserialize, Serialize};
-
 use crate::{
     ast,
-    linker::ids::{SymbolId, SymbolKind},
+    linker::meta::{SymbolId, SymbolKind, SymbolMetadata, Visibility},
     spanned::Location,
 };
 
-#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[rkyv(derive(Debug))]
-pub enum Visibility {
-    Public,
-    Package,
-    ModulePrivate,
-    Scoped(SymbolId),
-}
 
-#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
-#[rkyv(derive(Debug))]
-pub struct SymbolMetadata {
-    pub id: SymbolId,
-    pub fqmn: String,
-    pub kind: SymbolKind,
-    pub location: Location,
-    pub visibility: Visibility,
-    pub package: String,
-    pub module: String,
-}
 
-#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-#[rkyv(derive(Debug))]
+#[derive(Debug, Default, Clone)]
 pub struct SymbolTable {
     pub name_to_id: BTreeMap<String, SymbolId>,
     pub symbols: BTreeMap<SymbolId, SymbolMetadata>,
@@ -48,7 +26,7 @@ impl SymbolTable {
             let meta = SymbolMetadata {
                 id,
                 fqmn: fqmn.clone(),
-                kind: SymbolKind::Type,
+                kind: SymbolKind::Type { is_primitive: true, base_type: None, fields: vec![] },
                 location: Location::default(),
                 visibility: Visibility::Public,
                 package: "builtin".to_string(),

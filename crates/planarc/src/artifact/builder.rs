@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 pub fn create_bundle(compilation: CompilationResult) -> Bundle {
     let mut files = BTreeMap::new();
     for (file_id, path) in compilation.registry.files.into_iter() {
-        files.insert(file_id, path.origin);
+        files.insert(file_id, path.name().to_string());
     }
 
     let wasm_modules = BTreeMap::new();

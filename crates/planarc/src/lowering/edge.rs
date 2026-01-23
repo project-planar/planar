@@ -3,10 +3,10 @@ use crate::lowering::common::pub_vis_to_vis;
 use crate::lowering::ctx::Ctx;
 use crate::pdl;
 use crate::spanned::Spanned;
-use type_sitter::{Node, NodeResult};
+use type_sitter::{IncorrectKind, Node, NodeResult};
 
 pub fn lower_edge_definition<'a>(
-    ctx: &Ctx<'a>,
+    ctx: &Ctx,
     node: pdl::EdgeDefinition<'a>,
 ) -> NodeResult<'a, Spanned<EdgeDefinition>> {
     let name_node = node.name()?;
@@ -19,20 +19,21 @@ pub fn lower_edge_definition<'a>(
     let mut c = node.walk();
     for item in node.others(&mut c) {
         match item? {
-            pdl::anon_unions::Pub_Relation::Pub(pub_vis) => {
+            pdl::anon_unions::Pub_SimpleRelation::Pub(pub_vis) => {
                 vis = pub_vis_to_vis(pub_vis)?;
             }
-            pdl::anon_unions::Pub_Relation::Relation(relation) => rel_node = Some(relation),
+            pdl::anon_unions::Pub_SimpleRelation::SimpleRelation(relation) => {
+                rel_node = Some(relation)
+            }
         }
     }
 
     let name = ctx.spanned(&name_node, ctx.text(&name_node));
     let from = ctx.spanned(&from_node, ctx.text(&from_node));
     let to = ctx.spanned(&to_node, ctx.text(&to_node));
-    let relation = ctx.spanned(
-        &rel_node.expect("relation not found"),
-        ctx.text(&rel_node.expect("relation not found")),
-    );
+    let rel_node =
+        rel_node.ok_or_else(|| IncorrectKind::new::<pdl::SimpleRelation>(*node.raw()))?;
+    let relation = ctx.spanned(&rel_node, ctx.text(&rel_node));
 
     Ok(ctx.spanned(
         &node,

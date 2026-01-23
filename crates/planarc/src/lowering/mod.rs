@@ -10,3 +10,4 @@ pub mod node;
 pub mod query;
 pub mod test_utils;
 pub mod type_decl;
+pub mod grammar;

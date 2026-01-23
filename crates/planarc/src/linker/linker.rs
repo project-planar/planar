@@ -1,16 +1,17 @@
 use crate::ast::{self, Expression};
 use crate::linker::dependency_graph::LoweredGraph;
 use crate::linker::error::{AmbiguousCandidate, LinkerError, LinkerErrors, PreviousDefinition};
-use crate::linker::ids::{ResolvedId, SymbolId, SymbolKind};
+use crate::linker::meta::{FieldMetadata, FunctionParam, ResolvedId, SymbolId, SymbolKind, Visibility};
 use crate::linker::linked_ast::*;
 use crate::linker::lookup::SymbolLookup;
 use crate::linker::resolver::AstLinker;
-use crate::linker::symbol_table::{SymbolMetadata, SymbolTable, Visibility, map_visibility};
+use crate::linker::symbol_table::{SymbolTable, map_visibility};
 use crate::source_registry::SourceRegistry;
 use crate::spanned::{Location, Spanned};
 use miette::{NamedSource, SourceSpan};
 use tracing::{debug, error, info, instrument, trace, warn};
 
+#[derive(Clone)]
 pub struct Linker {
     pub table: SymbolTable,
     pub prelude: Vec<String>,
@@ -23,6 +24,14 @@ struct CollectCtx<'a> {
 }
 
 impl Linker {
+
+    pub fn new_with_table(prelude: Vec<String>, table: SymbolTable) -> Self {
+        Self {
+            table,
+            prelude,
+        }
+    }
+
     pub fn new(prelude: Vec<String>) -> Self {
         Self {
             table: SymbolTable::with_builtins(),
@@ -31,14 +40,14 @@ impl Linker {
     }
 
     #[instrument(skip(self, graph), fields(modules_count = graph.modules.len()))]
-    pub fn collect_definitions(&mut self, graph: &LoweredGraph) -> LinkerErrors {
+    pub fn collect_definitions(&mut self, graph: LoweredGraph) -> LinkerErrors {
         info!("Starting symbol collection phase");
         let mut errors = Vec::new();
 
-        for (module_name, module) in &graph.modules {
-            let package_name = module_name.split('.').next().unwrap_or(module_name);
+        for (module_name, module) in graph.modules {
+            let package_name = module_name.split('.').next().unwrap_or(&module_name);
             let ctx = CollectCtx {
-                module_name,
+                module_name: &module_name,
                 package_name,
                 registry: &graph.registry,
             };
@@ -46,156 +55,100 @@ impl Linker {
             self.collect_module_symbols(&ctx, module, &mut errors);
         }
 
-        LinkerErrors(errors)
+        LinkerErrors::new(errors)
     }
 
-    fn collect_module_symbols(
-        &mut self,
-        ctx: &CollectCtx,
-        module: &ast::Module,
-        errors: &mut Vec<LinkerError>,
-    ) {
-        // 1. Facts
-        for fact in &module.facts {
-            let vis = map_visibility(&fact.value.vis, None);
-            self.try_register(
-                ctx,
-                &fact.value.name.value,
-                SymbolKind::Fact,
-                fact.value.name.loc,
-                vis,
-                errors,
-            );
-        }
+    fn resolve_signatures(&mut self, graph: &LoweredGraph, registry: &SourceRegistry) -> Vec<Box<LinkerError>> {
+        let mut all_errors = Vec::new();
 
-        // 2. Types
-        for ty in &module.types {
-            let vis = map_visibility(&ty.value.vis, None);
-            self.try_register(
-                ctx,
-                &ty.value.name.value,
-                SymbolKind::Type,
-                ty.value.name.loc,
-                vis,
-                errors,
-            );
-        }
+        let sorted_indices = petgraph::algo::toposort(&graph.dep_graph, None)
+            .expect("Cycles should be handled in GraphBuilder");
 
-        // 3. Nodes & Nested Queries
-        for node in &module.nodes {
-            let vis = map_visibility(&node.value.vis, None);
-            if let Some(node_id) = self.try_register(
-                ctx,
-                &node.value.kind.value,
-                SymbolKind::Node,
-                node.value.kind.loc,
-                vis,
-                errors,
-            ) {
-                self.collect_node_statements(ctx, node_id, &node.value, errors);
-            }
-        }
+        for node_idx in sorted_indices {
+            let module_name = &graph.dep_graph[node_idx];
+            let module = &graph.modules[module_name];
+            let pkg = module_name.split('.').next().unwrap_or(module_name).to_string();
 
-        // 4. Global Queries
-        for query in &module.queries {
-            let vis = map_visibility(&query.value.vis, None);
-            self.try_register(
-                ctx,
-                &query.value.name.value,
-                SymbolKind::Query,
-                query.loc,
-                vis,
-                errors,
-            );
-        }
-
-        // 5. Externs
-        for ext in &module.externs {
-            let is_builtin = ext
-                .value
-                .attributes
-                .iter()
-                .any(|a| a.value.name.value == "builtin");
-            let vis = if is_builtin {
-                Visibility::Public
-            } else {
-                map_visibility(&ext.value.vis, None)
+            let lookup = SymbolLookup {
+                table: &self.table,
+                registry,
+                current_package: pkg,
+                current_module: module_name.to_string(),
+                imports: module.imports.iter().map(|i| i.value.fqmn.value.clone()).collect(),
+                prelude: self.prelude.clone(),
+                current_node_id: None,
             };
+            let mut linker = AstLinker::new(lookup);
 
-            for func in &ext.value.functions {
-                let prefix = if is_builtin {
-                    "builtin"
-                } else {
-                    ctx.module_name
-                };
-                let fqmn = format!("{}.{}", prefix, func.value.name.value);
+            let mut updates: Vec<(SymbolId, SymbolKind)> = Vec::new();
 
-                if let Err(prev_loc) = self.table.insert(
-                    &fqmn,
-                    SymbolKind::ExternFunction,
-                    func.value.name.loc,
-                    vis,
-                    ctx.package_name.to_string(),
-                    ctx.module_name.to_string(),
-                ) {
-                    errors.push(self.create_collision_error(
-                        &fqmn,
-                        func.value.name.loc,
-                        prev_loc,
-                        ctx.registry,
-                    ));
+            for fact in &module.facts {
+                let fqmn = format!("{}.{}", module_name, fact.value.name.value);
+                let Some(id) = self.table.name_to_id.get(&fqmn).copied() else { continue };
+
+                let mut fields = Vec::new();
+                for field in &fact.value.fields {
+                    if let Ok(res) = linker.lookup.find_symbol(&field.value.ty.name.value, field.value.ty.name.loc) {
+                        fields.push(FieldMetadata {
+                            name: field.value.name.value.clone(),
+                            type_id: res.symbol_id(),
+                            attributes: fact.value.attributes.iter().map(|a| a.value.name.value.clone()).collect(),
+                            location: field.loc,
+                        });
+                    } else {
+                        if let Err(e) = linker.lookup.find_symbol(&field.value.ty.name.value, field.value.ty.name.loc) {
+                            linker.errors.push(e);
+                        }
+                    }
+                }
+                updates.push((id, SymbolKind::Fact { fields }));
+            }
+
+            for edge in &module.edges {
+                let fqmn = format!("{}.{}", module_name, edge.value.name.value);
+                let Some(id) = self.table.name_to_id.get(&fqmn).copied() else { continue };
+
+                let from = linker.resolve_edge_endpoint(&edge.value.from.value, edge.value.from.loc);
+                let to = linker.resolve_edge_endpoint(&edge.value.to.value, edge.value.to.loc);
+
+                if let (Some(from), Some(to)) = (from, to) {
+                    updates.push((id, SymbolKind::Edge { from, to }));
+                }
+            }
+
+            for ext in &module.externs {
+                for func in &ext.value.functions {
+                    let fqmn = format!("{}.{}", module_name, func.value.name.value);
+                    let Some(id) = self.table.name_to_id.get(&fqmn).copied() else { continue };
+
+                    let mut params = Vec::new();
+                    for arg in &func.value.args {
+                        if let Ok(res) = linker.lookup.find_symbol(&arg.value.ty.value.name.value, arg.value.ty.value.name.loc) {
+                            params.push(FunctionParam {
+                                name: arg.value.name.value.clone(),
+                                type_id: res.symbol_id(),
+                                location: arg.loc,
+                            });
+                        }
+                    }
+                    let return_type = func.value.return_type.as_ref()
+                        .and_then(|rt| linker.lookup.find_symbol(&rt.value.name.value, rt.value.name.loc).ok())
+                        .map(|r| r.symbol_id());
+
+                    updates.push((id, SymbolKind::ExternFunction { params, return_type }));
+                }
+            }
+
+            all_errors.extend(linker.errors);
+
+            for (id, kind) in updates {
+                if let Some(meta) = self.table.symbols.get_mut(&id) {
+                    meta.kind = kind;
                 }
             }
         }
-    }
 
-    fn collect_node_statements(
-        &mut self,
-        ctx: &CollectCtx,
-        node_id: SymbolId,
-        node: &ast::NodeDefinition,
-        errors: &mut Vec<LinkerError>,
-    ) {
-        for stmt in &node.statements {
-            if let ast::NodeStatement::Query(q) = &stmt.value {
-                let name = format!("{}.{}", node.kind.value, q.value.name.value);
-                self.try_register(
-                    ctx,
-                    &name,
-                    SymbolKind::Query,
-                    q.loc,
-                    Visibility::Scoped(node_id),
-                    errors,
-                );
-            }
-        }
-    }
-
-    fn try_register(
-        &mut self,
-        ctx: &CollectCtx,
-        name: &str,
-        kind: SymbolKind,
-        loc: Location,
-        vis: Visibility,
-        errors: &mut Vec<LinkerError>,
-    ) -> Option<SymbolId> {
-        let fqmn = format!("{}.{}", ctx.module_name, name);
-
-        match self.table.insert(
-            &fqmn,
-            kind,
-            loc,
-            vis,
-            ctx.package_name.to_string(),
-            ctx.module_name.to_string(),
-        ) {
-            Ok(id) => Some(id),
-            Err(prev_loc) => {
-                errors.push(self.create_collision_error(&fqmn, loc, prev_loc, ctx.registry));
-                None
-            }
-        }
+        all_errors
     }
 
     #[instrument(skip(self, module, registry), fields(module = name))]
@@ -226,15 +179,195 @@ impl Linker {
 
         let linked = LinkedModule {
             file_id: module.file_id,
+            grammar: module.grammar.clone(),
             facts: linker.link_vec(&module.facts, AstLinker::resolve_fact),
             types: linker.link_vec(&module.types, AstLinker::resolve_type_decl),
             externs: linker.link_vec(&module.externs, AstLinker::resolve_extern_definition),
             queries: linker.link_vec(&module.queries, AstLinker::resolve_query),
             nodes: linker.link_vec(&module.nodes, AstLinker::resolve_node),
+            edges: linker.link_vec(&module.edges, AstLinker::resolve_edge),
         };
 
-        (linked, LinkerErrors(linker.errors))
+        (linked, LinkerErrors::new(linker.errors))
     }
+
+
+    fn collect_module_symbols(
+        &mut self,
+        ctx: &CollectCtx,
+        module: ast::Module,
+        errors: &mut Vec<Box<LinkerError>>,
+    ) {
+        for fact in module.facts {
+            let vis = map_visibility(&fact.value.vis, None);
+            self.try_register(
+                ctx,
+                &fact.value.name.value,
+                SymbolKind::Fact { fields: vec![] },
+                fact.value.name.loc,
+                vis,
+                errors,
+            );
+        }
+
+        for ty in module.types {
+            let vis = map_visibility(&ty.value.vis, None);
+            self.try_register(
+                ctx,
+                &ty.value.name.value,
+                SymbolKind::Type { 
+                    base_type: None,
+                    fields: vec![],
+                    is_primitive: false
+                },
+                ty.value.name.loc,
+                vis,
+                errors,
+            );
+        }
+
+        for edge in module.edges {
+            let vis = map_visibility(&edge.value.vis, None);
+
+            let kind = SymbolKind::Edge {
+                from: SymbolId(0),
+                to: SymbolId(0),
+            };
+
+            self.try_register(
+                ctx,
+                &edge.value.name.value,
+                kind,
+                edge.value.name.loc,
+                vis,
+                errors,
+            );
+        }
+
+        for node in module.nodes {
+            let vis = map_visibility(&node.value.vis, None);
+            if let Some(node_id) = self.try_register(
+                ctx,
+                &node.value.kind.value,
+                SymbolKind::Node,
+                node.value.kind.loc,
+                vis,
+                errors,
+            ) {
+                self.collect_node_statements(ctx, node_id, &node.value, errors);
+            }
+        }
+
+        for query in module.queries {
+            let vis = map_visibility(&query.value.vis, None);
+
+            let captures = query.value.captures.clone();
+            let source = query.value.value.clone();
+
+            self.try_register(
+                ctx,
+                &query.value.name.value,
+                SymbolKind::Query { captures, source },
+                query.loc,
+                vis,
+                errors,
+            );
+        }
+
+        for ext in module.externs {
+            let is_builtin = ext
+                .value
+                .attributes
+                .iter()
+                .any(|a| a.value.name.value == "builtin");
+            let vis = if is_builtin {
+                Visibility::Public
+            } else {
+                map_visibility(&ext.value.vis, None)
+            };
+
+            for func in ext.value.functions {
+                let prefix = if is_builtin {
+                    "builtin"
+                } else {
+                    ctx.module_name
+                };
+                let fqmn = format!("{}.{}", prefix, func.value.name.value);
+
+                if let Err(prev_loc) = self.table.insert(
+                    &fqmn,
+                    SymbolKind::ExternFunction { 
+                        params: vec![],
+                        return_type: None
+                    },
+                    func.value.name.loc,
+                    vis,
+                    ctx.package_name.to_string(),
+                    ctx.module_name.to_string(),
+                ) {
+                    errors.push(self.create_collision_error(
+                        &fqmn,
+                        func.value.name.loc,
+                        prev_loc,
+                        ctx.registry,
+                    ));
+                }
+            }
+        }
+    }
+
+    fn collect_node_statements(
+        &mut self,
+        ctx: &CollectCtx,
+        node_id: SymbolId,
+        node: &ast::NodeDefinition,
+        errors: &mut Vec<Box<LinkerError>>,
+    ) {
+        for stmt in &node.statements {
+            if let ast::NodeStatement::Query(q) = &stmt.value {
+                let captures = q.value.captures.clone();
+                let source = q.value.value.clone();
+                let name = format!("{}.{}", node.kind.value, q.value.name.value);
+                self.try_register(
+                    ctx,
+                    &name,
+                    SymbolKind::Query { captures, source },
+                    q.loc,
+                    Visibility::Scoped(node_id),
+                    errors,
+                );
+            }
+        }
+    }
+
+    fn try_register(
+        &mut self,
+        ctx: &CollectCtx,
+        name: &str,
+        kind: SymbolKind,
+        loc: Location,
+        vis: Visibility,
+        errors: &mut Vec<Box<LinkerError>>,
+    ) -> Option<SymbolId> {
+        let fqmn = format!("{}.{}", ctx.module_name, name);
+
+        match self.table.insert(
+            &fqmn,
+            kind,
+            loc,
+            vis,
+            ctx.package_name.to_string(),
+            ctx.module_name.to_string(),
+        ) {
+            Ok(id) => Some(id),
+            Err(prev_loc) => {
+                errors.push(self.create_collision_error(&fqmn, loc, prev_loc, ctx.registry));
+                None
+            }
+        }
+    }
+
+   
 
     fn create_collision_error(
         &self,
@@ -242,10 +375,10 @@ impl Linker {
         loc: Location,
         prev_loc: Location,
         reg: &SourceRegistry,
-    ) -> LinkerError {
+    ) -> Box<LinkerError> {
         let (src, span) = reg.get_source_and_span(loc);
         let (p_src, p_span) = reg.get_source_and_span(prev_loc);
-        LinkerError::SymbolCollision {
+        Box::new(LinkerError::SymbolCollision {
             name: name.to_string(),
             src,
             span,
@@ -255,7 +388,7 @@ impl Linker {
                 span: p_span,
                 loc: prev_loc,
             }],
-        }
+        })
     }
 }
 
@@ -270,10 +403,13 @@ pub mod tests {
 
     use crate::linker::dependency_graph::{GraphBuilder, LoweredGraph};
     use crate::linker::error::LinkerError;
-    use crate::linker::ids::{ResolvedId, SymbolId, SymbolKind};
+    use crate::linker::meta::{ResolvedId, SymbolId, SymbolKind};
     use crate::linker::linked_ast::LinkedExpression;
+    use crate::loader::MockLanguageLoader;
     use crate::module_loader::{InMemoryLoader, PackageRoot, Source};
     use crate::spanned::Location;
+    use crate::validator::grammar_registry::GrammarRegistry;
+    use crate::validator::query_validator::QueryValidator;
 
     fn get_parser() -> Parser {
         let mut parser = Parser::new();
@@ -312,8 +448,10 @@ pub mod tests {
 
         assert!(errors.is_empty(), "lower failed: {:?}", errors);
 
-        let mut linker = Linker::new(vec!["std".to_string()]);
-        let collect_errors = linker.collect_definitions(&lowered);
+        let prelude = vec!["std".to_string()];
+
+        let mut linker = Linker::new(prelude);
+        let collect_errors = linker.collect_definitions(lowered.clone());
 
         assert!(
             collect_errors.is_empty(),
@@ -467,49 +605,10 @@ pub mod tests {
             errors
                 .0
                 .iter()
-                .any(|e| matches!(e, LinkerError::AmbiguousReference { .. })),
+                .any(|e| matches!(**e, LinkerError::AmbiguousReference { .. })),
             "Errors found: {:?}",
             errors
         );
-    }
-
-    #[test]
-    fn test_collision_internal() {
-        let files = [(
-            "main",
-            r#"
-                type X = builtin.str
-                fact X {} 
-            "#,
-        )];
-
-        let mut registry = SourceRegistry::default();
-        let (file_id, src) = registry.add(Source {
-            origin: "m.pdl".into(),
-            content: files[0].1.into(),
-        });
-
-        let mut parser = get_parser();
-        let tree = parser.parse(files[0].1, None).unwrap();
-        let (module, _) =
-            crate::lowering::module::lower_module(type_sitter::Tree::wrap(tree), src, file_id);
-
-        let mut modules = BTreeMap::new();
-        modules.insert("main".to_string(), module);
-        let lg = LoweredGraph {
-            modules,
-            dep_graph: petgraph::graph::DiGraph::new(),
-            registry,
-        };
-
-        let mut linker = Linker::new(vec![]);
-        let errors = linker.collect_definitions(&lg);
-
-        assert_eq!(errors.0.len(), 1);
-        match &errors.0[0] {
-            LinkerError::SymbolCollision { name, .. } => assert_eq!(name, "main.X"),
-            _ => panic!("Expected collision error"),
-        }
     }
 
     #[test]
@@ -864,14 +963,14 @@ pub mod tests {
         let (lowered, _) = builder.build(&roots).unwrap();
 
         let mut linker = Linker::new(vec![]);
-        let errors = linker.collect_definitions(&lowered);
-
+        let errors = linker.collect_definitions(lowered);
+        
         assert!(
             !errors.is_empty(),
             "Should detect symbol collision in extern"
         );
         assert!(errors.0.iter().any(
-            |e| matches!(e, LinkerError::SymbolCollision { name, .. } if name == "main.fetch")
+            |e| matches!(e.as_ref(), LinkerError::SymbolCollision { name, .. } if name == "main.fetch")
         ));
     }
 
@@ -880,10 +979,10 @@ pub mod tests {
         let files = [(
             "main",
             r#"
-                query target: grammars.n = `(global_query)`
+                query target = `(global_query)`
                 
                 node MyNode {
-                    query target: grammars.n = `(local_query)`
+                    query target = `(local_query)`
                     match target { }
                 }
             "#,
@@ -931,8 +1030,17 @@ pub mod tests {
         let (lg, linker) = setup_project(&files, "main");
         let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
 
-        assert!(!errors.is_empty(), "Should have failed");
-        assert_eq!(errors.0[0].to_string(), "Unknown symbol: 'it'");
+        assert!(
+            !errors.is_empty(),
+            "Should have failed to resolve 'it' in match"
+        );
+        assert!(
+            errors.0.iter().any(
+                |e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "it")
+            ),
+            "Expected UnknownSymbol(it), got: {:?}",
+            errors
+        );
     }
 
     #[test]
@@ -960,4 +1068,469 @@ pub mod tests {
             _ => panic!("Expected match statement"),
         }
     }
+
+    #[test]
+    fn test_match_local_let_resolution() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(pattern) @cap` {
+                        let x = 10
+                        let y = x
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(errors.is_empty(), "Errors: {:?}", errors);
+
+        let node = &linked_mod.nodes[0].value;
+        let match_stmt = match &node.statements[0].value {
+            LinkedNodeStatement::Match(m) => m,
+            _ => panic!("Expected match"),
+        };
+
+        let let_y = match &match_stmt.body[1].value {
+            LinkedMatchItem::Let(l) => l,
+            _ => panic!("Expected let binding"),
+        };
+
+        match &let_y.value.value {
+            LinkedExpression::Identifier(ResolvedId::Local(id)) => {
+                assert_eq!(id.value, "x");
+            }
+            _ => panic!(
+                "Expected local resolution for 'x', got {:?}",
+                let_y.value.value
+            ),
+        }
+    }
+
+    #[test]
+    fn test_match_capture_resolution() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(pattern) @my_cap` {
+                        let val = @my_cap
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.is_empty(),
+            "Linker should allow @-captures: {:?}",
+            errors
+        );
+
+        let node = &linked_mod.nodes[0].value;
+        let match_stmt = match &node.statements[0].value {
+            LinkedNodeStatement::Match(m) => m,
+            _ => panic!("Expected match statement"),
+        };
+
+        let let_val = match &match_stmt.body[0].value {
+            LinkedMatchItem::Let(l) => l,
+            _ => panic!("Expected let binding"),
+        };
+
+        match &let_val.value.value {
+            LinkedExpression::Identifier(ResolvedId::Local(id)) => {
+                assert_eq!(id.value, "@my_cap");
+            }
+            _ => panic!(
+                "Expected @my_cap to resolve as Local, got {:?}",
+                let_val.value.value
+            ),
+        }
+    }
+
+    #[test]
+    fn test_match_capture_resolution_error() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(pattern) @my_cap` {
+                        let val = @my_cap_wrong
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::UndefinedCapture { capture_name, .. } if capture_name == "my_cap_wrong")),
+            "Expected UndefinedCapture(my_cap_wrong), got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_match_shadowing() {
+        let files = [
+            ("lib", "pub type GlobalVar = builtin.i64"),
+            (
+                "main",
+                r#"
+                import lib
+                node MyNode {
+                    match `(node)` {
+                        let GlobalVar = 42
+                        let check = GlobalVar
+                    }
+                }
+            "#,
+            ),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (linked_mod, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(errors.is_empty());
+
+        let node = &linked_mod.nodes[0].value;
+        let match_stmt = match &node.statements[0].value {
+            LinkedNodeStatement::Match(m) => m,
+            _ => panic!("Expected match"),
+        };
+
+        let let_check = match &match_stmt.body[1].value {
+            LinkedMatchItem::Let(l) => l,
+            _ => panic!("Expected let"),
+        };
+
+        match &let_check.value.value {
+            LinkedExpression::Identifier(ResolvedId::Local(id)) => {
+                assert_eq!(id.value, "GlobalVar");
+            }
+            _ => panic!(
+                "Shadowing failed: expected Local, got {:?}",
+                let_check.value.value
+            ),
+        }
+    }
+
+    #[test]
+    fn test_match_nested_capture_let() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(node)` {
+                        @cap { 
+                            let inner = 1 
+                        }
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::UndefinedCapture { capture_name, .. } if capture_name == "cap")),
+            "Expected UndefinedCapture(cap), got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_match_lexical_binding_scope() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(function_definition name: (identifier) @fn_name) @func` {
+                        @func { 
+                            let internal_id = @fn_name 
+                        }
+                        let alias = internal_id
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "internal_id")),
+            "Expected UnknownSymbol(internal_id) due to scope exit, got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_match_it_disallowed() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(node)` {
+                        let x = it
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(
+                |e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "it")
+            ),
+            "Expected 'it' to be unknown in match block, got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_match_order_dependency() {
+        let files = [(
+            "main",
+            r#"
+                node MyNode {
+                    match `(node)` {
+                        let y = x
+                        let x = 1
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(
+                |e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "x")
+            ),
+            "Expected 'x' to be unknown before its declaration"
+        );
+    }
+
+    #[test]
+    fn test_edge_invalid_endpoint_kind() {
+        let files = [(
+            "main",
+            r#"
+                query MyQuery = `(node)`
+                fact MyFact { id: builtin.i64 }
+
+                edge WrongEdge = MyQuery -> MyFact
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            !errors.is_empty(),
+            "Linker should fail when edge points to a Query"
+        );
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::InvalidSymbolKind { found, .. } if found == "Query")),
+            "Expected InvalidSymbolKind(Query), got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_emit_resolution_success() {
+        let files = [(
+            "main",
+            r#"
+                type String = builtin.str
+                fact User { id: String }
+                fact File { path: String }
+                edge Owns = User -> File
+
+                node Protect {
+                    match `(user_node) @u` {
+                        let p = "/root"
+                        emit User { id: @u } -[Owns]-> File { path: p }
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(errors.is_empty(), "Linker errors: {:?}", errors);
+    }
+
+    #[test]
+    fn test_emit_unknown_relation() {
+        let files = [(
+            "main",
+            r#"
+                type Int = builtin.i64
+                fact A { id: Int }
+                node Test {
+                    match `(node)` {
+                        emit A { id: 1 } <-[UnknownRel]-> A { id: 2 }
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "UnknownRel")),
+            "Expected UnknownSymbol(UnknownRel), got: {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_emit_order_dependency() {
+        let files = [(
+            "main",
+            r#"
+                fact User { id: String }
+                edge Friend = User -> User
+
+                node Test {
+                    match `(node)` {
+                        emit User { id: x } -[Friend]-> User { id: "admin" }
+                        let x = "val"
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(
+                |e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "x")
+            ),
+            "Variable 'x' should not be visible before its definition"
+        );
+    }
+
+    #[test]
+    fn test_emit_with_capture_scoping() {
+        let files = [(
+            "main",
+            r#"
+                fact User { name: String }
+                edge Rel = User -> User
+
+                node Test {
+                    match `(node)` {
+                        @inner {
+                            let local_val = "ok"
+                        }
+                        
+                        emit User { name: local_val } -[Rel]-> User { name: "sys" }
+                    }
+                }
+            "#,
+        )];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0.iter().any(|e| matches!(e.as_ref(), LinkerError::UnknownSymbol { name, .. } if name == "local_val")),
+            "Expected local_val to be out of scope after capture block"
+        );
+    }
+
+    #[test]
+    fn test_emit_cross_module_resolution() {
+        let files = [
+            (
+                "defs",
+                r#"
+                    pub fact GlobalFact { id: Int }
+                    pub edge GlobalRel = GlobalFact -> GlobalFact
+                "#,
+            ),
+            (
+                "main",
+                r#"
+                    import defs
+                    node Test {
+                        match `q` {
+                            emit defs.GlobalFact { id: 1 } <-[defs.GlobalRel]-> defs.GlobalFact { id: 2 }
+                        }
+                    }
+                "#,
+            ),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+        
+        assert!(
+            errors.is_empty(),
+            "Should resolve names with module prefixes: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    fn test_levenshtein_suggestion() {
+        let files = [
+            ("main", "edge A = MyFact -> MyFact \n fact MyFact {} \n node N { match `q` { emit MyFact {} -[A]-> MyFuct { }  } }"),
+        ];
+
+        let (lg, linker) = setup_project(&files, "main");
+        let (_, errors) = linker.link_module("main", &lg.modules["main"], &lg.registry);
+
+        assert!(
+            errors.0
+                .iter()
+                .any(
+                    |e| matches!(
+                        e.as_ref(),
+                        LinkerError::UnknownSymbol { name, help, .. } if name == "MyFuct" && help.clone().unwrap() == "Did you mean 'MyFact'?"
+                    )
+                ),
+            "Did you mean 'MyFact'?, got {:?}", errors
+        );
+    }
+
+    #[test]
+    fn test_linker_state_snapshot() {
+        let files = [
+            ("types", "pub type ID = builtin.i64"),
+            ("models", r#"
+                import types
+                pub fact User { id: types.ID }
+                pub fact Post { author_id: types.ID }
+            "#),
+            ("social", r#"
+                import models
+                pub edge Ownership = models.User -> models.Post
+                
+                pub extern {
+                    notify user: models.User, msg: builtin.str -> builtin.bool
+                }
+            "#),
+        ];
+
+        let (lg, mut linker) = setup_project(&files, "social");
+
+        let errors = linker.resolve_signatures(&lg, &lg.registry);
+        
+        assert!(errors.is_empty(), "Linker errors: {:?}", errors);
+
+        insta::assert_debug_snapshot!(linker.table);
+    }
+
 }

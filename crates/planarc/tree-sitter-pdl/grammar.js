@@ -21,12 +21,14 @@ export default grammar({
     [$._type_primary, $.type_application],
     [$.type_application],
     [$.refinement],
+    [$.emmited_fact_field]
   ],
 
   rules: {
 
     source_file: $ => seq(
       repeat(choice(
+        $.grammar_declaration,
         $.edge_definition,
         $.query_definition,
         $.node_definition, 
@@ -38,6 +40,8 @@ export default grammar({
       ))
     ),
 
+    grammar_declaration: $ => seq('using', field('name', $.fqmn)),
+
     pub: _ => seq('pub', optional(field('pkg', '(pkg)'))),
 
     node_definition: $ => seq(
@@ -46,13 +50,14 @@ export default grammar({
       field('kind', $.fqmn),
       $.block
     ),
+
     edge_definition: $ => seq(
       optional($.pub),
       'edge',
       field('name', $.identifier),
       '=',
       field('from', $.type_identifier),
-      $.relation,
+      $.simple_relation,
       field('to', $.type_identifier),
     ),
 
@@ -60,8 +65,6 @@ export default grammar({
       optional($.pub),
       'query',
       field('name', $.identifier),
-      ':',
-      field('grammar', $.fqmn),
       '=',
       field('value', $.query_literal)
     ),
@@ -103,14 +106,28 @@ export default grammar({
       field('content', alias(repeat(/[^`]+/), $.raw_content)),
       '`'
     ),
+
+    emit: $ => seq(
+      'emit',
+      field('left_fact', $.emmited_fact),
+      $.relation,
+      field('right_fact', $.emmited_fact)  
+    ),
+
+    emmited_fact: $ => seq(
+      $.type_identifier,
+      '{',
+      repeat(choice($.emmited_fact_field, $._newline)),
+      '}'
+    ),
+    emmited_fact_field: $ => seq(
+      field('field', $.identifier), ':', field('value', $._expression), optional(choice(',', $._newline))
+    ),
     attribute: $ => seq(
       '#',
       field('name', $.identifier),
       $._newline
     ),
-
-
-
 
     type_definition: $ => choice(
       field('type', $.type_annotation),
@@ -183,7 +200,6 @@ export default grammar({
 
     it: _ => field('it', 'it'),
     
-
     list_items: $ => commaSep1($._expression),
     
     in_expression: $ => seq(
@@ -196,7 +212,7 @@ export default grammar({
       ']'
     ),
 
-    operator_identifier: $ => /[!@#$%^&*\-+=|<>/?~]+/,
+    operator_identifier: $ => /[!#$%^&*\-+=|<>/?~]+/,
 
     range: $ => seq(
       field('start', $._expression),
@@ -206,17 +222,12 @@ export default grammar({
 
     type_identifier: $ => $.fqmn,
 
-
-    
     binary_expression: $ => prec.left(1, seq(
-        field('left', $._expression),
-        field('operator', choice('+', '-', '*', '/', '==', '!=', '>', '<', '>=', '<=')),
-        field('right', $._expression)
+      field('left', $._expression),
+      field('operator', choice('+', '-', '*', '/', '==', '!=', '>', '<', '>=', '<=')),
+      field('right', $._expression)
     )),
     
-
-
-
     extern_def_fn: $ => seq(
       choice(
         $.identifier,
@@ -246,9 +257,6 @@ export default grammar({
       '}'
     ),
     
-
-
-    
     block: $ => seq(
       '{',
       repeat(choice($._statement, $._newline)),
@@ -273,46 +281,68 @@ export default grammar({
     ),
 
     _match_statements: $ => choice(
-      $.capture
+      $.capture,
+      $.emit,
+      $.let_bind
+    ),
+
+    let_bind: $ => seq(
+      'let',
+      field('identifier', $.identifier),
+      '=',
+      field('expression', repeat($._expression))
     ),
 
     capture: $ => seq(
-      $.variable,
+      $.cap_identifier,
       $.capture_block
-    ),
-
-    _capture_statements: $ => choice(
-      $.graph_bind
-    ),
-
-    graph_left_statements: $ => choice(
-      $.variable,
-      $.identifier
-    ),
-
-    graph_right_statements: $ => choice(
-      $.call_func
-    ),
-    
-    call_func: $ => seq(
-      field('function', $.fqmn),
-      repeat(field('arg', $.variable)),
-      $._newline,
-    ),
-
-    relation: _ => choice('<-', '->', '<->'),
-
-    graph_bind: $ => seq(
-      field('left', $.graph_left_statements),
-      field('relation', $.relation),
-      field('right', $.graph_right_statements)
     ),
 
     capture_block: $ => seq(
       '{',
-      repeat(choice($._capture_statements, $._newline)),
+      repeat(choice($._match_statements, $._newline)),
       '}'
     ),
+
+    relation: $ => {
+      const dash = '-';
+      const openBracket = token.immediate('[');
+      const closeBracket = token.immediate(']');
+      const dashIn = token.immediate('-');
+      const arrowL = '<';
+      const arrowR = '>';
+
+      const middle = (/** @type {RuleOrLiteral} */ firstDash) => seq(
+        firstDash,
+        openBracket,
+        $.fqmn,
+        closeBracket,
+        dashIn
+      );
+
+      return choice(
+        // CASE: <-[id]- (left)
+        seq(
+          field('left', arrowL), 
+          middle(token.immediate(dash))
+        ),
+
+        // CASE: -[id]-> (right)
+        seq(
+          middle(dash), 
+          field('right', token.immediate(arrowR))
+        ),
+
+        // CASE: <-[id]-> (both)
+        seq(
+          field('left', arrowL),
+          middle(token.immediate(dash)),
+          field('right', token.immediate(arrowR))
+        )
+      );
+    },
+
+    simple_relation: _ => choice('<-', '->', '<->'),
 
     fqmn: $ => seq(
       $.identifier,      
@@ -322,23 +352,8 @@ export default grammar({
       ))
     ),
 
-    _simple_variable: $ => choice(
-      /@[a-zA-Z_][a-zA-Z0-9_]*/,
-      /\$[a-zA-Z_][a-zA-Z0-9_]*/
-    ),
-
-    property_access: $ => seq(
-      '.',
-      /[a-zA-Z_][a-zA-Z0-9_]*/
-    ),
-
-    variable: $ => seq(
-      $._simple_variable,
-      repeat($.property_access)
-    ),
-
-
-    identifier: $ => /[a-zA-Z_][a-zA-Z0-9_-]*/,
+    identifier: $ => /@?[a-zA-Z_][a-zA-Z0-9_-]*/,
+    cap_identifier: $ => /@[a-zA-Z_][a-zA-Z0-9_-]*/,
 
     boolean: $ => choice('true', 'false'),
     

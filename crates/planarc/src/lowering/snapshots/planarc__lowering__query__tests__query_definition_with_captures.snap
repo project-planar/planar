@@ -1,0 +1,14 @@
+---
+source: crates/planarc/src/lowering/query.rs
+expression: ast
+---
+QueryDefinition {
+    vis: Private,
+    name: "find_stuff" @ Span { start: 6, end: 16, line: 1, col: 7, line_end: 0, col_end: 16 },
+    grammar: "grammars.rust" @ Span { start: 18, end: 31, line: 1, col: 19, line_end: 0, col_end: 31 },
+    value: "\n                (function_item \n                    name: (identifier) @fn.name\n                    body: (block) @fn.body\n                ) ; @this_is_ignored\n            " @ Span { start: 34, end: 209, line: 1, col: 35, line_end: 5, col_end: 13 },
+    captures: [
+        "fn.name" @ Span { start: 107, end: 115, line: 3, col: 40, line_end: 3, col_end: 48 },
+        "fn.body" @ Span { start: 150, end: 158, line: 4, col: 35, line_end: 4, col_end: 43 },
+    ],
+} @ Span { start: 0, end: 209, line: 1, col: 1, line_end: 5, col_end: 13 }

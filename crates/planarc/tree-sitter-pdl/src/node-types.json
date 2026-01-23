@@ -35,32 +35,6 @@
     }
   },
   {
-    "type": "call_func",
-    "named": true,
-    "fields": {
-      "arg": {
-        "multiple": true,
-        "required": false,
-        "types": [
-          {
-            "type": "variable",
-            "named": true
-          }
-        ]
-      },
-      "function": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "fqmn",
-            "named": true
-          }
-        ]
-      }
-    }
-  },
-  {
     "type": "capture",
     "named": true,
     "fields": {},
@@ -69,11 +43,11 @@
       "required": true,
       "types": [
         {
-          "type": "capture_block",
+          "type": "cap_identifier",
           "named": true
         },
         {
-          "type": "variable",
+          "type": "capture_block",
           "named": true
         }
       ]
@@ -88,7 +62,15 @@
       "required": false,
       "types": [
         {
-          "type": "graph_bind",
+          "type": "capture",
+          "named": true
+        },
+        {
+          "type": "emit",
+          "named": true
+        },
+        {
+          "type": "let_bind",
           "named": true
         }
       ]
@@ -138,10 +120,115 @@
           "named": true
         },
         {
+          "type": "simple_relation",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "emit",
+    "named": true,
+    "fields": {
+      "left_fact": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "emmited_fact",
+            "named": true
+          }
+        ]
+      },
+      "right_fact": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "emmited_fact",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
           "type": "relation",
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "emmited_fact",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "emmited_fact_field",
+          "named": true
+        },
+        {
+          "type": "type_identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "emmited_fact_field",
+    "named": true,
+    "fields": {
+      "field": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "fqmn",
+            "named": true
+          },
+          {
+            "type": "in_expression",
+            "named": true
+          },
+          {
+            "type": "it",
+            "named": true
+          },
+          {
+            "type": "number",
+            "named": true
+          },
+          {
+            "type": "operator_identifier",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "string",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -349,73 +436,19 @@
     }
   },
   {
-    "type": "graph_bind",
+    "type": "grammar_declaration",
     "named": true,
     "fields": {
-      "left": {
+      "name": {
         "multiple": false,
         "required": true,
         "types": [
           {
-            "type": "graph_left_statements",
-            "named": true
-          }
-        ]
-      },
-      "relation": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "relation",
-            "named": true
-          }
-        ]
-      },
-      "right": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "graph_right_statements",
+            "type": "fqmn",
             "named": true
           }
         ]
       }
-    }
-  },
-  {
-    "type": "graph_left_statements",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "variable",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "graph_right_statements",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "call_func",
-          "named": true
-        }
-      ]
     }
   },
   {
@@ -463,6 +496,56 @@
           {
             "type": "it",
             "named": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "let_bind",
+    "named": true,
+    "fields": {
+      "expression": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "fqmn",
+            "named": true
+          },
+          {
+            "type": "in_expression",
+            "named": true
+          },
+          {
+            "type": "it",
+            "named": true
+          },
+          {
+            "type": "number",
+            "named": true
+          },
+          {
+            "type": "operator_identifier",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "string",
+            "named": true
+          }
+        ]
+      },
+      "identifier": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
           }
         ]
       }
@@ -517,6 +600,14 @@
       "types": [
         {
           "type": "capture",
+          "named": true
+        },
+        {
+          "type": "emit",
+          "named": true
+        },
+        {
+          "type": "let_bind",
           "named": true
         }
       ]
@@ -622,11 +713,6 @@
     }
   },
   {
-    "type": "property_access",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "pub",
     "named": true,
     "fields": {
@@ -646,16 +732,6 @@
     "type": "query_definition",
     "named": true,
     "fields": {
-      "grammar": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "fqmn",
-            "named": true
-          }
-        ]
-      },
       "name": {
         "multiple": false,
         "required": true,
@@ -825,6 +901,42 @@
   {
     "type": "relation",
     "named": true,
+    "fields": {
+      "left": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "<",
+            "named": false
+          }
+        ]
+      },
+      "right": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": ">",
+            "named": false
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "fqmn",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "simple_relation",
+    "named": true,
     "fields": {}
   },
   {
@@ -846,6 +958,10 @@
         },
         {
           "type": "fact_definition",
+          "named": true
+        },
+        {
+          "type": "grammar_declaration",
           "named": true
         },
         {
@@ -1040,21 +1156,6 @@
     }
   },
   {
-    "type": "variable",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "property_access",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "#",
     "named": false
   },
@@ -1075,6 +1176,10 @@
     "named": false
   },
   {
+    "type": "-",
+    "named": false
+  },
+  {
     "type": "->",
     "named": false
   },
@@ -1091,6 +1196,10 @@
     "named": false
   },
   {
+    "type": "<",
+    "named": false
+  },
+  {
     "type": "<-",
     "named": false
   },
@@ -1100,6 +1209,10 @@
   },
   {
     "type": "=",
+    "named": false
+  },
+  {
+    "type": ">",
     "named": false
   },
   {
@@ -1119,12 +1232,20 @@
     "named": false
   },
   {
+    "type": "cap_identifier",
+    "named": true
+  },
+  {
     "type": "comment",
     "named": true,
     "extra": true
   },
   {
     "type": "edge",
+    "named": false
+  },
+  {
+    "type": "emit",
     "named": false
   },
   {
@@ -1149,6 +1270,10 @@
   },
   {
     "type": "it",
+    "named": false
+  },
+  {
+    "type": "let",
     "named": false
   },
   {
@@ -1185,6 +1310,10 @@
   },
   {
     "type": "type",
+    "named": false
+  },
+  {
+    "type": "using",
     "named": false
   },
   {

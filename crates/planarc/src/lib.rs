@@ -1,5 +1,6 @@
 mod ast;
 mod db;
+pub mod error;
 mod lowering;
 mod manifest;
 mod pdl;

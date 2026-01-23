@@ -3,112 +3,82 @@ use crate::lowering::edge::lower_edge_definition;
 use crate::lowering::error::LoweringErrors;
 use crate::lowering::extern_funcs::lower_extern_definition;
 use crate::lowering::facts::lower_fact_definition;
+use crate::lowering::grammar::lower_grammar_declaration;
 use crate::lowering::import::lower_import;
 use crate::lowering::node::lower_node_definition;
 use crate::lowering::query::lower_query_definition;
 use crate::lowering::type_decl::lower_type_declaration;
 use crate::module_loader::Source;
 use crate::pdl;
+use crate::source_registry::MietteSource;
 use crate::spanned::{FileId, Location, Span};
 use crate::{ast::*, lowering::error::LoweringError};
 use tree_sitter::TreeCursor;
 use type_sitter::{HasChildren, Node};
 
+
 pub fn lower_module(
     tree: type_sitter::Tree<pdl::SourceFile<'static>>,
-    source: &Source,
+    source: MietteSource,
     file_id: FileId,
 ) -> (Module, LoweringErrors) {
-    let ctx = Ctx::new(source, file_id);
+
+    let ctx = Ctx::new(source.clone(), file_id);
 
     let root = match tree.root_node() {
         Ok(r) => r,
-        Err(e) => {
-            return (
-                Module::default(),
-                LoweringErrors::new(vec![LoweringError::from_incorrect_kind(e, source, &ctx)]),
-            );
-        }
+        Err(e) => return (Module::default(), LoweringErrors::new(vec![
+            LoweringError::from_incorrect_kind(e, source, &ctx)
+        ])),
     };
 
+    let mut mod_def = Module { file_id, ..Default::default() };
     let mut errors = Vec::new();
-    let mut imports = Vec::new();
-    let mut facts = Vec::new();
-    let mut types = Vec::new();
-    let mut externs = Vec::new();
-    let mut queries = Vec::new();
-    let mut edges = Vec::new();
-    let mut nodes = Vec::new();
+
+    macro_rules! process {
+        ($node:expr, $lower_fn:expr, $target:expr) => {
+            match $lower_fn(&ctx, $node) {
+                Ok(item) => $target.push(item),
+                Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source.clone(), &ctx)),
+            }
+        };
+        ($node:expr, $lower_fn:expr, set $target:expr) => {
+            match $lower_fn(&ctx, $node) {
+                Ok(item) => $target = Some(item),
+                Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source.clone(), &ctx)),
+            }
+        };
+    }
+
 
     let mut cursor = root.walk();
-
     for child_res in root.children(&mut cursor) {
-        use pdl::anon_unions::Anon314737192860065104467245150540293684006 as U;
+        use pdl::anon_unions::Anon331116562354213157727272504972515459572 as U;
+
+        let raw_node = match &child_res {
+            Ok(u) => *u.raw(),
+            Err(e) => *e.node.raw(),
+        };
+        
+        if raw_node.has_error() {
+            errors.extend(LoweringError::collect_from_tree(raw_node, source.clone(), &ctx));
+        }
 
         match child_res {
-            Ok(child_union) => {
-                if child_union.raw().has_error() {
-                    errors.extend(LoweringError::collect_from_tree(
-                        *child_union.raw(),
-                        source,
-                        &ctx,
-                    ));
-                }
-
-                match child_union {
-                    U::ImportDefinition(node) => match lower_import(&ctx, node) {
-                        Ok(i) => imports.push(i),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
-                    },
-                    U::FactDefinition(node) => match lower_fact_definition(&ctx, node) {
-                        Ok(f) => facts.push(f),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
-                    },
-                    U::TypeDeclaration(node) => match lower_type_declaration(&ctx, node) {
-                        Ok(t) => types.push(t),
-                        Err(e) => errors.push(LoweringError::from_incorrect_kind(e, source, &ctx)),
-                    },
-                    U::ExternDefinition(node) => match lower_extern_definition(&ctx, node) {
-                        Ok(e) => externs.push(e),
-                        Err(err) => {
-                            errors.push(LoweringError::from_incorrect_kind(err, source, &ctx))
-                        }
-                    },
-                    U::QueryDefinition(node) => match lower_query_definition(&ctx, node) {
-                        Ok(e) => queries.push(e),
-                        Err(err) => {
-                            errors.push(LoweringError::from_incorrect_kind(err, source, &ctx))
-                        }
-                    },
-                    U::EdgeDefinition(node) => match lower_edge_definition(&ctx, node) {
-                        Ok(e) => edges.push(e),
-                        Err(err) => {
-                            errors.push(LoweringError::from_incorrect_kind(err, source, &ctx))
-                        }
-                    },
-                    U::NodeDefinition(node) => match lower_node_definition(&ctx, node) {
-                        Ok(e) => nodes.push(e),
-                        Err(err) => {
-                            errors.push(LoweringError::from_incorrect_kind(err, source, &ctx))
-                        }
-                    },
-                }
+            Ok(u) => match u {
+                U::GrammarDeclaration(n) => process!(n, lower_grammar_declaration, set mod_def.grammar),
+                U::ImportDefinition(n)   => process!(n, lower_import,              mod_def.imports),
+                U::FactDefinition(n)     => process!(n, lower_fact_definition,     mod_def.facts),
+                U::TypeDeclaration(n)    => process!(n, lower_type_declaration,    mod_def.types),
+                U::ExternDefinition(n)   => process!(n, lower_extern_definition,   mod_def.externs),
+                U::QueryDefinition(n)    => process!(n, lower_query_definition,    mod_def.queries),
+                U::EdgeDefinition(n)     => process!(n, lower_edge_definition,     mod_def.edges),
+                U::NodeDefinition(n)     => process!(n, lower_node_definition,     mod_def.nodes),
+            },
+            Err(e) if !raw_node.has_error() => {
+                errors.push(LoweringError::from_incorrect_kind(e, source.clone(), &ctx));
             }
-            Err(incorrect_kind) => {
-                if incorrect_kind.node.has_error() || incorrect_kind.node.is_error() {
-                    errors.extend(LoweringError::collect_from_tree(
-                        *incorrect_kind.node.raw(),
-                        source,
-                        &ctx,
-                    ));
-                } else {
-                    errors.push(LoweringError::from_incorrect_kind(
-                        incorrect_kind,
-                        source,
-                        &ctx,
-                    ));
-                }
-            }
+            _ => {}
         }
     }
 
@@ -116,17 +86,6 @@ pub fn lower_module(
         errors.extend(LoweringError::collect_from_tree(*root.raw(), source, &ctx));
     }
 
-    (
-        Module {
-            imports,
-            facts,
-            externs,
-            types,
-            queries,
-            file_id,
-            edges,
-            nodes,
-        },
-        LoweringErrors::new(errors),
-    )
+    (mod_def, LoweringErrors::new(errors))
 }
+

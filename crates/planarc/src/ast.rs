@@ -11,6 +11,7 @@ pub enum Visibility {
 #[derive(Debug, Clone, Default)]
 pub struct Module {
     pub file_id: FileId,
+    pub grammar: Option<Spanned<String>>,
     pub imports: Vec<Spanned<Import>>,
     pub facts: Vec<Spanned<FactDefinition>>,
     pub externs: Vec<Spanned<ExternDefinition>>,
@@ -24,8 +25,8 @@ pub struct Module {
 pub struct QueryDefinition {
     pub vis: Visibility,
     pub name: Spanned<String>,
-    pub grammar: Spanned<String>,
     pub value: Spanned<String>,
+    pub captures: Vec<Spanned<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,18 +45,62 @@ pub enum NodeStatement {
 #[derive(Debug, Clone)]
 pub struct MatchStatement {
     pub query_ref: Spanned<MatchQueryReference>,
+    pub statements: Vec<Spanned<BlockStatement>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum BlockStatement {
+    Let(LetBinding),
+    Capture(Capture),
+    Emit(EmitStatement),
+}
+
+#[derive(Debug, Clone)]
+pub struct EmitStatement {
+    pub left: Spanned<EmittedFact>,
+    pub right: Spanned<EmittedFact>,
+    pub relation: Spanned<String>,
+    pub direction: RelationDirection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelationDirection {
+    Left,  // <
+    Right, // >
+    Both,  // <>
+}
+
+#[derive(Debug, Clone)]
+pub struct EmittedFact {
+    pub type_name: Spanned<String>,
+    pub fields: Vec<Spanned<EmittedFieldAssignment>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EmittedFieldAssignment {
+    pub name: Spanned<String>,
+    pub value: Spanned<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Capture {
-    //TODO: plug
     pub name: Spanned<String>,
+    pub statements: Vec<Spanned<BlockStatement>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LetBinding {
+    pub name: Spanned<String>,
+    pub value: Spanned<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub enum MatchQueryReference {
     Identifier(String),
-    Raw(String),
+    Raw {
+        value: Spanned<String>,
+        captures: Vec<Spanned<String>>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -125,7 +170,7 @@ pub enum Expression {
     OperatorIdentifier(String),
     Number(String),
     StringLit(String),
-
+    It,
     Binary {
         left: Box<Spanned<Expression>>,
         op: Spanned<String>,

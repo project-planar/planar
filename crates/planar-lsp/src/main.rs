@@ -322,8 +322,8 @@ impl LanguageServer for Backend {
                             let span = metadata.location.span;
 
                             let token_type = match metadata.kind {
-                                linker::ids::SymbolKind::ExternFunction => Some(3),
-                                linker::ids::SymbolKind::Type => Some(1),
+                                linker::meta::SymbolKind::ExternFunction => Some(3),
+                                linker::meta::SymbolKind::Type => Some(1),
                                 _ => None,
                             };
 

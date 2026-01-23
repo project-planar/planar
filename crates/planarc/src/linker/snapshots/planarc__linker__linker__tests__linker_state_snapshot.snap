@@ -1,0 +1,410 @@
+---
+source: crates/planarc/src/linker/linker.rs
+expression: linker.table
+---
+SymbolTable {
+    name_to_id: {
+        "builtin.bool": SymbolId(
+            3,
+        ),
+        "builtin.f64": SymbolId(
+            2,
+        ),
+        "builtin.i64": SymbolId(
+            1,
+        ),
+        "builtin.list": SymbolId(
+            4,
+        ),
+        "builtin.str": SymbolId(
+            0,
+        ),
+        "models.Post": SymbolId(
+            6,
+        ),
+        "models.User": SymbolId(
+            5,
+        ),
+        "social.Ownership": SymbolId(
+            7,
+        ),
+        "social.notify": SymbolId(
+            8,
+        ),
+        "types.ID": SymbolId(
+            9,
+        ),
+    },
+    symbols: {
+        SymbolId(
+            0,
+        ): SymbolMetadata {
+            id: SymbolId(
+                0,
+            ),
+            fqmn: "builtin.str",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: true,
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 0,
+                    col: 0,
+                    line_end: 0,
+                    col_end: 0,
+                },
+            },
+            visibility: Public,
+            package: "builtin",
+            module: "builtin",
+        },
+        SymbolId(
+            1,
+        ): SymbolMetadata {
+            id: SymbolId(
+                1,
+            ),
+            fqmn: "builtin.i64",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: true,
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 0,
+                    col: 0,
+                    line_end: 0,
+                    col_end: 0,
+                },
+            },
+            visibility: Public,
+            package: "builtin",
+            module: "builtin",
+        },
+        SymbolId(
+            2,
+        ): SymbolMetadata {
+            id: SymbolId(
+                2,
+            ),
+            fqmn: "builtin.f64",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: true,
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 0,
+                    col: 0,
+                    line_end: 0,
+                    col_end: 0,
+                },
+            },
+            visibility: Public,
+            package: "builtin",
+            module: "builtin",
+        },
+        SymbolId(
+            3,
+        ): SymbolMetadata {
+            id: SymbolId(
+                3,
+            ),
+            fqmn: "builtin.bool",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: true,
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 0,
+                    col: 0,
+                    line_end: 0,
+                    col_end: 0,
+                },
+            },
+            visibility: Public,
+            package: "builtin",
+            module: "builtin",
+        },
+        SymbolId(
+            4,
+        ): SymbolMetadata {
+            id: SymbolId(
+                4,
+            ),
+            fqmn: "builtin.list",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: true,
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 0,
+                    col: 0,
+                    line_end: 0,
+                    col_end: 0,
+                },
+            },
+            visibility: Public,
+            package: "builtin",
+            module: "builtin",
+        },
+        SymbolId(
+            5,
+        ): SymbolMetadata {
+            id: SymbolId(
+                5,
+            ),
+            fqmn: "models.User",
+            kind: Fact {
+                fields: [
+                    FieldMetadata {
+                        name: "id",
+                        type_id: SymbolId(
+                            9,
+                        ),
+                        attributes: [],
+                        location: Location {
+                            file_id: FileId(
+                                0,
+                            ),
+                            span: Span {
+                                start: 62,
+                                end: 75,
+                                line: 3,
+                                col: 33,
+                                line_end: 2,
+                                col_end: 45,
+                            },
+                        },
+                    },
+                ],
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 55,
+                    end: 59,
+                    line: 3,
+                    col: 26,
+                    line_end: 2,
+                    col_end: 29,
+                },
+            },
+            visibility: Public,
+            package: "models",
+            module: "models",
+        },
+        SymbolId(
+            6,
+        ): SymbolMetadata {
+            id: SymbolId(
+                6,
+            ),
+            fqmn: "models.Post",
+            kind: Fact {
+                fields: [
+                    FieldMetadata {
+                        name: "author_id",
+                        type_id: SymbolId(
+                            9,
+                        ),
+                        attributes: [],
+                        location: Location {
+                            file_id: FileId(
+                                0,
+                            ),
+                            span: Span {
+                                start: 109,
+                                end: 129,
+                                line: 4,
+                                col: 33,
+                                line_end: 3,
+                                col_end: 52,
+                            },
+                        },
+                    },
+                ],
+            },
+            location: Location {
+                file_id: FileId(
+                    0,
+                ),
+                span: Span {
+                    start: 102,
+                    end: 106,
+                    line: 4,
+                    col: 26,
+                    line_end: 3,
+                    col_end: 29,
+                },
+            },
+            visibility: Public,
+            package: "models",
+            module: "models",
+        },
+        SymbolId(
+            7,
+        ): SymbolMetadata {
+            id: SymbolId(
+                7,
+            ),
+            fqmn: "social.Ownership",
+            kind: Edge {
+                from: SymbolId(
+                    5,
+                ),
+                to: SymbolId(
+                    6,
+                ),
+            },
+            location: Location {
+                file_id: FileId(
+                    1,
+                ),
+                span: Span {
+                    start: 56,
+                    end: 65,
+                    line: 3,
+                    col: 26,
+                    line_end: 2,
+                    col_end: 34,
+                },
+            },
+            visibility: Public,
+            package: "social",
+            module: "social",
+        },
+        SymbolId(
+            8,
+        ): SymbolMetadata {
+            id: SymbolId(
+                8,
+            ),
+            fqmn: "social.notify",
+            kind: ExternFunction {
+                params: [
+                    FunctionParam {
+                        name: "user",
+                        type_id: SymbolId(
+                            5,
+                        ),
+                        location: Location {
+                            file_id: FileId(
+                                1,
+                            ),
+                            span: Span {
+                                start: 168,
+                                end: 185,
+                                line: 6,
+                                col: 28,
+                                line_end: 5,
+                                col_end: 44,
+                            },
+                        },
+                    },
+                    FunctionParam {
+                        name: "msg",
+                        type_id: SymbolId(
+                            0,
+                        ),
+                        location: Location {
+                            file_id: FileId(
+                                1,
+                            ),
+                            span: Span {
+                                start: 187,
+                                end: 203,
+                                line: 6,
+                                col: 47,
+                                line_end: 5,
+                                col_end: 62,
+                            },
+                        },
+                    },
+                ],
+                return_type: None,
+            },
+            location: Location {
+                file_id: FileId(
+                    1,
+                ),
+                span: Span {
+                    start: 161,
+                    end: 167,
+                    line: 6,
+                    col: 21,
+                    line_end: 5,
+                    col_end: 26,
+                },
+            },
+            visibility: Public,
+            package: "social",
+            module: "social",
+        },
+        SymbolId(
+            9,
+        ): SymbolMetadata {
+            id: SymbolId(
+                9,
+            ),
+            fqmn: "types.ID",
+            kind: Type {
+                base_type: None,
+                fields: [],
+                is_primitive: false,
+            },
+            location: Location {
+                file_id: FileId(
+                    2,
+                ),
+                span: Span {
+                    start: 9,
+                    end: 11,
+                    line: 1,
+                    col: 10,
+                    line_end: 0,
+                    col_end: 11,
+                },
+            },
+            visibility: Public,
+            package: "types",
+            module: "types",
+        },
+    },
+    next_id: 10,
+}

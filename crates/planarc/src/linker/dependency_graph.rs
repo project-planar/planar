@@ -14,18 +14,17 @@ use type_sitter::{HasChildren, Node};
 
 use crate::ast::Module;
 use crate::linker::error::{CycleStep, GraphError};
-use crate::linker::ids::SymbolId;
+use crate::linker::meta::SymbolId;
 use crate::linker::symbol_table::SymbolTable;
 use crate::lowering::error::{LoweringError, LoweringErrors};
 use crate::lowering::module::lower_module;
 use crate::manifest::ModuleResolver;
-use crate::module_loader::{DiscoveredModule, ModuleLoader, PackageRoot, Source};
+use crate::module_loader::{DiscoveredModule, ModuleLoader, PackageRoot};
 use crate::pdl;
-use crate::source_registry::SourceRegistry;
+use crate::source_registry::{MietteSource, SourceRegistry};
 use crate::spanned::{FileId, Location, Span, Spanned};
 use crate::unit::CompilationUnit;
 use crate::utils::TypeSitterResultExt;
-use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Display)]
 pub enum Binding {
@@ -118,7 +117,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
             .into_par_iter()
             .enumerate()
             .map(|(idx, (fqmn, discovered))| {
-                let file_id = FileId(idx as u32);
+                let file_id = FileId(idx);
                 let _span = trace_span!("lower_module", module = %fqmn, ?file_id).entered();
 
                 let unit = self
@@ -127,7 +126,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                     .map_err(|e| anyhow!(e))
                     .and_then(|src| CompilationUnit::new(src))?;
 
-                let (module_ast, errors) = lower_module(unit.tree, &unit.source, file_id);
+                let (module_ast, errors) = lower_module(unit.tree, unit.source.clone(), file_id);
 
                 Ok((fqmn, file_id, unit.source, module_ast, errors))
             })
@@ -137,7 +136,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
         let mut indices = BTreeMap::new();
         let mut modules = BTreeMap::new();
         let mut registry = SourceRegistry::default();
-        let mut all_errors = LoweringErrors(vec![]);
+        let mut all_errors = LoweringErrors::new(vec![]);
         let mut source_lookup = BTreeMap::new();
         let mut pending_edges = Vec::new();
 
@@ -145,11 +144,9 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
             let (fqmn, file_id, source, ast, errors) = res.map_err(|e| miette::miette!(e))?;
 
             all_errors.merge(errors);
-            source_lookup.insert(
-                fqmn.clone(),
-                (source.content.clone(), source.origin.clone()),
-            );
-            registry.add_with_id(source, file_id);
+            source_lookup.insert(fqmn.clone(), source.clone());
+
+            registry.add_with_id(source.clone(), file_id);
 
             let idx = graph.add_node(fqmn.clone());
             indices.insert(fqmn.clone(), idx);
@@ -166,9 +163,9 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                 if let Some(&target_idx) = indices.get(import_name) {
                     graph.add_edge(src_idx, target_idx, location);
                 } else {
-                    let (src_code, origin) = &source_lookup[&src_fqmn];
+                    let src = source_lookup[&src_fqmn].clone();
                     return Err(GraphError::UnknownImport {
-                        src: NamedSource::new(origin.clone(), src_code.clone()),
+                        src,
                         span: location.into(),
                         import: import_name.clone(),
                         module: src_fqmn,
@@ -203,7 +200,7 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
         &self,
         graph: &DiGraph<String, Location>,
         start: NodeIndex,
-        lookup: &BTreeMap<String, (String, String)>,
+        lookup: &BTreeMap<String, MietteSource>,
     ) -> miette::Result<Vec<CycleStep>> {
         let mut path = Vec::new();
         let mut visited = HashSet::new();
@@ -219,9 +216,9 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                     .map(|e| graph[e.target()].clone())
                     .unwrap_or_default();
 
-                let (src_code, origin) = &lookup[module_name];
+                let src = lookup[module_name].clone();
                 steps.push(CycleStep {
-                    src: NamedSource::new(origin.clone(), src_code.clone()),
+                    src,
                     span: loc.into(),
                     module: module_name.clone(),
                     target: target_name,
@@ -276,13 +273,13 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
         file_id: FileId,
     ) -> Result<Vec<Spanned<String>>> {
         let root = unit.tree.root_node().unwrap();
-        let source_bytes = unit.source.content.as_bytes();
+        let source_bytes = unit.source.inner().as_bytes();
 
         let mut imports = Vec::new();
         let mut cursor = root.walk();
 
         for child in root.children(&mut cursor) {
-            use crate::pdl::anon_unions::Anon314737192860065104467245150540293684006 as NodeEnum;
+            use crate::pdl::anon_unions::Anon331116562354213157727272504972515459572 as NodeEnum;
 
             if let NodeEnum::ImportDefinition(imp) = child.static_err()? {
                 let fqmn_node = imp.fqmn().static_err()?;
@@ -294,10 +291,10 @@ impl<'a, L: ModuleLoader + Sync> GraphBuilder<'a, L> {
                 let span = Span::new(
                     range.start_byte,
                     range.end_byte,
-                    (range.start_point.row + 1) as u32,
-                    (range.start_point.column + 1) as u32,
-                    range.end_point.row as u32,
-                    range.end_point.column as u32,
+                    range.start_point.row + 1,
+                    range.start_point.column + 1,
+                    range.end_point.row + 1,        
+                    range.end_point.column + 1,     
                 );
 
                 let loc = Location::new(file_id, span);

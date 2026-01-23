@@ -24,11 +24,13 @@ pub mod test_utils {
             let typed_tree = type_sitter::Tree::<$crate::pdl::SourceFile>::wrap(tree);
             let root = typed_tree.root_node().expect("Failed to wrap root node");
 
-            let source = $crate::module_loader::Source {
-                content: $code.to_string(),
-                origin: "test_input".to_string(),
-            };
-            let ctx = $crate::lowering::ctx::Ctx::new(&source, $crate::spanned::FileId(0));
+            let content_arc = std::sync::Arc::new($code.to_string());
+            let miette_source = std::sync::Arc::new(miette::NamedSource::new(
+                "test_input".to_string(),
+                content_arc,
+            ));
+
+            let ctx = $crate::lowering::ctx::Ctx::new(miette_source, $crate::spanned::FileId(0));
             let mut cursor = typed_tree.walk();
 
             let pdl_node = root

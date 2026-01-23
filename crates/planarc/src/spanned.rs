@@ -18,7 +18,7 @@ use std::fmt::Debug;
     Display,
 )]
 #[rkyv(derive(Debug, PartialEq, Eq, PartialOrd, Ord))]
-pub struct FileId(pub u32);
+pub struct FileId(pub usize);
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Archive, Serialize, Deserialize, Display)]
 #[rkyv(derive(Debug))]
@@ -76,14 +76,21 @@ where
 pub struct Span {
     pub start: usize,
     pub end: usize,
-    pub line: u32,
-    pub col: u32,
-    pub line_end: u32,
-    pub col_end: u32,
+    pub line: usize,
+    pub col: usize,
+    pub line_end: usize,
+    pub col_end: usize,
 }
 
 impl Span {
-    pub fn new(start: usize, end: usize, line: u32, col: u32, line_end: u32, col_end: u32) -> Self {
+    pub fn new(
+        start: usize,
+        end: usize,
+        line: usize,
+        col: usize,
+        line_end: usize,
+        col_end: usize,
+    ) -> Self {
         Self {
             start,
             end,
